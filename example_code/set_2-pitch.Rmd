@@ -192,7 +192,7 @@ gam.check.p.value <- function (mod, which.line) {
 }
 ```
 
-Fitting the models. Dense first.
+Fitting the models.
 
 ```{r}
 # what k's should be tried?
@@ -296,7 +296,7 @@ gam.check.p.value <- function (mod, which.line) {
 }
 ```
 
-Fitting the models. Dense first.
+Fitting the models.
 
 ```{r}
 # what k's should be tried?

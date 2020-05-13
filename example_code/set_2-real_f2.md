@@ -139,20 +139,20 @@ summary(nocomp)
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)    1449.741      6.313 229.626  < 2e-16 ***
-    ## group.orderedB   66.328      8.928   7.429 1.25e-13 ***
+    ## (Intercept)    1471.925      6.244 235.748   <2e-16 ***
+    ## group.orderedB   15.470      8.826   1.753   0.0797 .  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
-    ##                                    edf Ref.df       F  p-value    
-    ## s(measurement.no)                8.481  8.907 168.752  < 2e-16 ***
-    ## s(measurement.no):group.orderedB 3.523  4.559   4.943 0.000326 ***
+    ##                                    edf Ref.df       F p-value    
+    ## s(measurement.no)                8.521   8.93 169.460  <2e-16 ***
+    ## s(measurement.no):group.orderedB 2.801   3.64   2.598  0.0401 *  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.387   Deviance explained = 38.8%
-    ## fREML =  39636  Scale est. = 36436     n = 6143
+    ## R-sq.(adj) =  0.374   Deviance explained = 37.5%
+    ## fREML =  39802  Scale est. = 36041     n = 6172
 
 ### NO SMOOTHS: 2. Rand intcpt (= Random Intercept)
 
@@ -178,21 +178,21 @@ summary(rand_intcpt)
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)     1447.70      22.69   63.79   <2e-16 ***
-    ## group.orderedB    61.30      32.09    1.91   0.0561 .  
+    ## (Intercept)     1470.73      25.44  57.814   <2e-16 ***
+    ## group.orderedB    13.03      35.97   0.362    0.717    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
-    ##                                     edf Ref.df       F  p-value    
-    ## s(measurement.no)                 8.505  8.912 178.780  < 2e-16 ***
-    ## s(measurement.no):group.orderedB  3.574  4.623   5.136 0.000203 ***
-    ## s(speaker)                       26.017 28.000  69.712 3.18e-10 ***
+    ##                                     edf Ref.df       F p-value    
+    ## s(measurement.no)                 8.555  8.937 181.149  <2e-16 ***
+    ## s(measurement.no):group.orderedB  2.877  3.740   2.804   0.028 *  
+    ## s(speaker)                       26.483 29.000  16.804  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.476   Deviance explained = 47.9%
-    ## fREML =  39494  Scale est. = 34372     n = 6143
+    ## R-sq.(adj) =  0.482   Deviance explained = 48.5%
+    ## fREML =  39609  Scale est. = 33398     n = 6172
 
 ### NO SMOOTHS: 3. Rand intcpt + slope (= random intercept + slope)
 
@@ -220,22 +220,22 @@ summary(rand_intcpt_slope)
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)     1447.56      36.77  39.370   <2e-16 ***
-    ## group.orderedB    62.54      51.99   1.203    0.229    
+    ## (Intercept)     1470.88      38.71   38.00   <2e-16 ***
+    ## group.orderedB    13.13      54.73    0.24     0.81    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
-    ##                                     edf Ref.df      F p-value    
-    ## s(measurement.no)                 8.520  8.916 129.03 < 2e-16 ***
-    ## s(measurement.no):group.orderedB  3.622  4.685   3.95 0.00201 ** 
-    ## s(speaker)                       24.373 30.000 290.12 0.00453 ** 
-    ## s(measurement.no,speaker)        24.815 28.000 306.32 0.80956    
+    ##                                     edf Ref.df       F p-value    
+    ## s(measurement.no)                 8.566  8.939 136.623 < 2e-16 ***
+    ## s(measurement.no):group.orderedB  2.892  3.759   2.796 0.02801 *  
+    ## s(speaker)                       24.938 30.000 380.637 0.00199 ** 
+    ## s(measurement.no,speaker)        24.993 28.000 400.991 0.83970    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.504   Deviance explained = 50.9%
-    ## fREML =  39419  Scale est. = 33144     n = 6143
+    ## R-sq.(adj) =  0.509   Deviance explained = 51.4%
+    ## fREML =  39528  Scale est. = 32157     n = 6172
 
 ### TP SMOOTHS: 4. Rand smooth, tp, 3 bs
 
@@ -268,21 +268,21 @@ summary(rand_smooth_tp_3)
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)     1438.91      27.24  52.819   <2e-16 ***
-    ## group.orderedB    80.44      37.36   2.153   0.0313 *  
+    ## (Intercept)     1458.31      30.05  48.536   <2e-16 ***
+    ## group.orderedB    38.47      40.88   0.941    0.347    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
-    ##                                     edf Ref.df      F  p-value    
-    ## s(measurement.no)                 8.553  8.929 69.457  < 2e-16 ***
-    ## s(measurement.no):group.orderedB  2.290  2.920  1.564    0.158    
-    ## s(measurement.no,speaker)        74.838 88.000 17.877 2.55e-08 ***
+    ##                                     edf Ref.df       F p-value    
+    ## s(measurement.no)                 8.593  8.954 100.817  <2e-16 ***
+    ## s(measurement.no):group.orderedB  1.037  1.061   0.102   0.741    
+    ## s(measurement.no,speaker)        75.502 88.000  30.025  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.519   Deviance explained = 52.6%
-    ## fREML =  39368  Scale est. = 32334     n = 6143
+    ## R-sq.(adj) =  0.525   Deviance explained = 53.1%
+    ## fREML =  39487  Scale est. = 31477     n = 6172
 
 ### TP SMOOTHS: 5. Rand smooth, tp, 5 bs
 
@@ -315,21 +315,21 @@ summary(rand_smooth_tp_5)
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)     1440.65      26.89  53.570   <2e-16 ***
-    ## group.orderedB    76.84      37.29   2.061   0.0394 *  
+    ## (Intercept)     1461.51      30.24  48.325   <2e-16 ***
+    ## group.orderedB    32.26      41.74   0.773     0.44    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
-    ##                                      edf Ref.df      F p-value    
-    ## s(measurement.no)                  8.521   8.89 64.948  <2e-16 ***
-    ## s(measurement.no):group.orderedB   2.102   2.51  1.049   0.291    
-    ## s(measurement.no,speaker)        110.724 148.00 12.535  <2e-16 ***
+    ##                                      edf  Ref.df      F p-value    
+    ## s(measurement.no)                  8.550   8.905 72.431  <2e-16 ***
+    ## s(measurement.no):group.orderedB   1.495   1.689  0.221   0.693    
+    ## s(measurement.no,speaker)        113.125 148.000 15.978  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.522   Deviance explained = 53.1%
-    ## fREML =  39359  Scale est. = 31983     n = 6143
+    ## R-sq.(adj) =  0.529   Deviance explained = 53.9%
+    ## fREML =  39468  Scale est. = 30992     n = 6172
 
 ### TP SMOOTHS: 6. Rand smooth, tp, 10 bs
 
@@ -362,21 +362,21 @@ summary(rand_smooth_tp_10)
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)     1445.42      25.55   56.58   <2e-16 ***
-    ## group.orderedB    67.48      35.89    1.88   0.0601 .  
+    ## (Intercept)     1467.17      29.38  49.946   <2e-16 ***
+    ## group.orderedB    21.05      41.21   0.511     0.61    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
     ##                                      edf  Ref.df      F p-value    
-    ## s(measurement.no)                  8.229   8.553 70.016  <2e-16 ***
-    ## s(measurement.no):group.orderedB   2.591   2.966  2.010  0.0925 .  
-    ## s(measurement.no,speaker)        166.554 296.000  5.724  <2e-16 ***
+    ## s(measurement.no)                  8.273   8.582 73.681  <2e-16 ***
+    ## s(measurement.no):group.orderedB   2.067   2.344  1.082   0.344    
+    ## s(measurement.no,speaker)        169.306 296.000  9.832  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.517   Deviance explained = 53.1%
-    ## fREML =  39379  Scale est. = 31936     n = 6143
+    ## R-sq.(adj) =  0.525   Deviance explained = 53.9%
+    ## fREML =  39492  Scale est. = 30991     n = 6172
 
 ### TP SMOOTHS: 7. Rand smooth, tp, 15 bs
 
@@ -404,7 +404,7 @@ gam.check.p.value <- function (mod, which.line) {
 }
 ```
 
-Fitting the models. Dense first.
+Fitting the models.
 
 ``` r
 # what k's should be tried?
@@ -453,21 +453,21 @@ for (k in seq(k_min,k_max,k_step)) {
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)     1437.89      26.80  53.660   <2e-16 ***
-    ## group.orderedB    82.58      36.78   2.245   0.0248 *  
+    ## (Intercept)     1459.98      30.15  48.419   <2e-16 ***
+    ## group.orderedB    35.32      41.28   0.856    0.392    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
     ##                                     edf  Ref.df      F p-value    
-    ## s(measurement.no)                 8.552   8.922 70.009  <2e-16 ***
-    ## s(measurement.no):group.orderedB  1.808   2.185  0.894   0.365    
-    ## s(measurement.no,speaker)        94.400 118.000 11.259  <2e-16 ***
+    ## s(measurement.no)                 8.574   8.933 79.537  <2e-16 ***
+    ## s(measurement.no):group.orderedB  1.268   1.409  0.071   0.789    
+    ## s(measurement.no,speaker)        96.139 118.000 12.390  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.521   Deviance explained =   53%
-    ## fREML =  39360  Scale est. = 32099     n = 6143
+    ## R-sq.(adj) =  0.529   Deviance explained = 53.7%
+    ## fREML =  39469  Scale est. = 31104     n = 6172
 
 ### CR SMOOTHS: 9. Rand smooth, tp, 3 bs
 
@@ -500,21 +500,21 @@ summary(rand_smooth_cr_3)
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)     1444.84      24.74  58.396   <2e-16 ***
-    ## group.orderedB    69.27      34.54   2.006   0.0449 *  
+    ## (Intercept)     1464.70      27.37  53.517   <2e-16 ***
+    ## group.orderedB    26.25      37.95   0.692    0.489    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
-    ##                                     edf Ref.df     F  p-value    
-    ## s(measurement.no)                 8.543  8.922 65.82  < 2e-16 ***
-    ## s(measurement.no):group.orderedB  2.849  3.737  1.03     0.32    
-    ## s(measurement.no,speaker)        75.869 86.000 22.06 2.19e-08 ***
+    ##                                    edf Ref.df       F  p-value    
+    ## s(measurement.no)                 8.60  8.959 102.480  < 2e-16 ***
+    ## s(measurement.no):group.orderedB  1.00  1.000   0.019    0.892    
+    ## s(measurement.no,speaker)        76.63 86.000  21.932 7.25e-08 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.519   Deviance explained = 52.6%
-    ## fREML =  39352  Scale est. = 32165     n = 6143
+    ## R-sq.(adj) =  0.525   Deviance explained = 53.1%
+    ## fREML =  39471  Scale est. = 31310     n = 6172
 
 ### CR SMOOTHS: 10. Rand smooth, tp, 5 bs
 
@@ -547,21 +547,21 @@ summary(rand_smooth_cr_5)
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)     1445.92      23.54  61.412   <2e-16 ***
-    ## group.orderedB    66.61      33.11   2.012   0.0443 *  
+    ## (Intercept)     1467.90      25.99  56.482   <2e-16 ***
+    ## group.orderedB    19.70      36.41   0.541    0.588    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
-    ##                                     edf  Ref.df      F p-value    
-    ## s(measurement.no)                 8.551   8.920 53.455  <2e-16 ***
-    ## s(measurement.no):group.orderedB  2.138   2.637  0.646   0.495    
-    ## s(measurement.no,speaker)        99.518 146.000  9.548  <2e-16 ***
+    ##                                      edf  Ref.df      F p-value    
+    ## s(measurement.no)                  8.587   8.943 58.403  <2e-16 ***
+    ## s(measurement.no):group.orderedB   1.000   1.000  0.022   0.882    
+    ## s(measurement.no,speaker)        105.688 146.000  7.281  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.522   Deviance explained = 53.1%
-    ## fREML =  39344  Scale est. = 31917     n = 6143
+    ## R-sq.(adj) =   0.53   Deviance explained = 53.9%
+    ## fREML =  39450  Scale est. = 30848     n = 6172
 
 ### CR SMOOTHS: 11. Rand smooth, tp, 10 bs
 
@@ -594,21 +594,21 @@ summary(rand_smooth_cr_10)
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)     1446.92      23.24   62.25   <2e-16 ***
-    ## group.orderedB    64.34      32.82    1.96     0.05 *  
+    ## (Intercept)     1469.53      25.29   58.10   <2e-16 ***
+    ## group.orderedB    16.07      35.68    0.45    0.652    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
-    ##                                     edf  Ref.df      F p-value    
-    ## s(measurement.no)                  8.53   8.897 54.578  <2e-16 ***
-    ## s(measurement.no):group.orderedB   2.15   2.614  0.630   0.473    
-    ## s(measurement.no,speaker)        109.83 297.000  2.967  <2e-16 ***
+    ##                                      edf  Ref.df      F p-value    
+    ## s(measurement.no)                  8.565   8.918 62.013  <2e-16 ***
+    ## s(measurement.no):group.orderedB   1.000   1.000  0.017   0.897    
+    ## s(measurement.no,speaker)        117.216 298.000  3.536  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.522   Deviance explained = 53.1%
-    ## fREML =  39344  Scale est. = 31867     n = 6143
+    ## R-sq.(adj) =   0.53   Deviance explained = 53.9%
+    ## fREML =  39451  Scale est. = 30824     n = 6172
 
 ### CR SMOOTHS: 12. Rand smooth, tp, 15 bs
 
@@ -636,7 +636,7 @@ gam.check.p.value <- function (mod, which.line) {
 }
 ```
 
-Fitting the models. Dense first.
+Fitting the models.
 
 ``` r
 # what k's should be tried?
@@ -685,18 +685,18 @@ for (k in seq(k_min,k_max,k_step)) {
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)     1445.40      23.90  60.479   <2e-16 ***
-    ## group.orderedB    67.83      33.50   2.025    0.043 *  
+    ## (Intercept)     1466.86      26.53  55.288   <2e-16 ***
+    ## group.orderedB    22.01      36.96   0.595    0.552    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
-    ##                                     edf  Ref.df      F p-value    
-    ## s(measurement.no)                 8.552   8.923 53.091  <2e-16 ***
-    ## s(measurement.no):group.orderedB  2.291   2.904  0.740   0.471    
-    ## s(measurement.no,speaker)        91.641 116.000  7.519  <2e-16 ***
+    ##                                     edf Ref.df      F p-value    
+    ## s(measurement.no)                 8.593   8.95 60.626  <2e-16 ***
+    ## s(measurement.no):group.orderedB  1.000   1.00  0.022   0.881    
+    ## s(measurement.no,speaker)        95.610 116.00  9.556  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.522   Deviance explained =   53%
-    ## fREML =  39345  Scale est. = 31964     n = 6143
+    ## R-sq.(adj) =   0.53   Deviance explained = 53.8%
+    ## fREML =  39452  Scale est. = 30931     n = 6172
