@@ -197,21 +197,21 @@ summary(modsum)
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)     1406.21      14.10  99.714   <2e-16 ***
-    ## group.orderedB    50.22      19.92   2.521   0.0117 *  
+    ## (Intercept)     1432.61      21.08  67.963   <2e-16 ***
+    ## group.orderedB    31.46      29.77   1.057    0.291    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
     ##                                      edf  Ref.df      F p-value    
-    ## s(measurement.no)                  8.037   8.705 40.130  <2e-16 ***
-    ## s(measurement.no):group.orderedB   3.815   4.668  2.389  0.0501 .  
-    ## s(measurement.no,speaker)        101.481 146.000 22.184  <2e-16 ***
+    ## s(measurement.no)                  7.991   8.662 30.861  <2e-16 ***
+    ## s(measurement.no):group.orderedB   4.017   4.906  1.626   0.154    
+    ## s(measurement.no,speaker)        111.162 146.000 39.406  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.534   Deviance explained = 53.8%
-    ## fREML =  84485  Scale est. = 20697     n = 13200
+    ## R-sq.(adj) =  0.582   Deviance explained = 58.5%
+    ## fREML =  84557  Scale est. = 20821     n = 13200
 
 ### MODEL SUMMARY: 2. Looking at model summary + Bonferroni correction
 
@@ -247,20 +247,20 @@ summary(binsmooth)
     ## 
     ## Parametric coefficients:
     ##             Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)   1406.2       14.1   99.71   <2e-16 ***
+    ## (Intercept)  1432.61      21.08   67.96   <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
     ##                                 edf  Ref.df      F p-value    
-    ## s(measurement.no)             8.037   8.705 40.135 < 2e-16 ***
-    ## s(measurement.no):group.bin   4.815   5.668  3.194 0.00986 ** 
-    ## s(measurement.no,speaker)   101.481 146.000 22.093 < 2e-16 ***
+    ## s(measurement.no)             7.991   8.662 30.897  <2e-16 ***
+    ## s(measurement.no):group.bin   5.017   5.906  1.272   0.289    
+    ## s(measurement.no,speaker)   111.162 146.000 39.639  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.534   Deviance explained = 53.8%
-    ## fREML =  84485  Scale est. = 20697     n = 13200
+    ## R-sq.(adj) =  0.582   Deviance explained = 58.5%
+    ## fREML =  84557  Scale est. = 20821     n = 13200
 
 ### LIKELIHOOD RATIO TESTS: 4. Likelihood Ratio Test using models fitted with ML
 
@@ -305,10 +305,12 @@ compareML(lrt_ML_full, lrt_ML_nested)
     ## Chi-square test of ML scores
     ## -----
     ##           Model    Score Edf Difference    Df p.value Sig.
-    ## 1 lrt_ML_nested 84506.10   6                              
-    ## 2   lrt_ML_full 84500.46   9      5.635 3.000   0.010  *  
+    ## 1 lrt_ML_nested 84575.10   6                              
+    ## 2   lrt_ML_full 84572.86   9      2.235 3.000   0.215     
     ## 
-    ## AIC difference: 1.41, model lrt_ML_nested has lower AIC.
+    ## AIC difference: 2.00, model lrt_ML_nested has lower AIC.
+
+    ## Warning in compareML(lrt_ML_full, lrt_ML_nested): Only small difference in ML...
 
 ### LIKELIHOOD RATIO TESTS: 5. Likelihood Ratio Test using models fitted with fREML
 
@@ -353,10 +355,10 @@ compareML(lrt_fREML_full, lrt_fREML_nested)
     ## Chi-square test of fREML scores
     ## -----
     ##              Model    Score Edf Difference    Df   p.value Sig.
-    ## 1 lrt_fREML_nested 84499.01   6                                
-    ## 2   lrt_fREML_full 84485.11   9     13.897 3.000 4.012e-06  ***
+    ## 1 lrt_fREML_nested 84568.01   6                                
+    ## 2   lrt_fREML_full 84557.24   9     10.768 3.000 8.150e-05  ***
     ## 
-    ## AIC difference: 0.87, model lrt_fREML_nested has lower AIC.
+    ## AIC difference: 1.09, model lrt_fREML_nested has lower AIC.
 
 ### LIKELIHOOD RATIO TESTS: 6. Likelihood Ratio Test with fREML trick
 
@@ -376,9 +378,6 @@ lrt_fREML_trick_full <- bam(f2 ~ s(group.ordered, bs="re") +
 
     ## Warning in gam.side(sm, X, tol = .Machine$double.eps^0.5): model has
     ## repeated 1-d smooths of same variable.
-
-    ## Warning in bgam.fitd(G, mf, gp, scale, nobs.extra = 0, rho = rho, coef =
-    ## coef, : algorithm did not converge
 
 ``` r
 lrt_fREML_trick_nested <- bam(f2 ~ # s(group.ordered, bs="re") + 
@@ -408,17 +407,14 @@ compareML(lrt_fREML_trick_full, lrt_fREML_trick_nested)
     ## Chi-square test of fREML scores
     ## -----
     ##                    Model    Score Edf Difference    Df p.value Sig.
-    ## 1 lrt_fREML_trick_nested 84503.22   6                              
-    ## 2   lrt_fREML_trick_full 84499.12   9      4.098 3.000   0.042  *  
+    ## 1 lrt_fREML_trick_nested 84571.98   6                              
+    ## 2   lrt_fREML_trick_full 84569.87   9      2.115 3.000   0.238     
     ## 
-    ## AIC difference: 0.48, model lrt_fREML_trick_nested has lower AIC.
+    ## AIC difference: 0.76, model lrt_fREML_trick_nested has lower AIC.
 
     ## Warning in compareML(lrt_fREML_trick_full, lrt_fREML_trick_nested): Only small difference in fREML...
 
 ### Model comparison with AIC (models fitted with fREML)
-
-As noted in the main text of the paper, the results of this model
-comparison are meaningless.
 
 ``` r
 aic_fREML_full <- bam(f2 ~ group.ordered + 
@@ -449,8 +445,8 @@ AIC(aic_fREML_full, aic_fREML_nested)
 ```
 
     ##                        df      AIC
-    ## aic_fREML_full   117.9013 168758.4
-    ## aic_fREML_nested 118.5273 168757.5
+    ## aic_fREML_full   127.7108 168846.7
+    ## aic_fREML_nested 127.0263 168845.7
 
 ### VISUAL TESTS
 
@@ -487,4 +483,4 @@ plot_diff(modsum, view="measurement.no", comp=list(group.ordered=c("A","B")), rm
 
     ## 
     ## measurement.no window(s) of significant difference(s):
-    ##  0.535354 - 1.000000
+    ##  0.797980 - 0.888889

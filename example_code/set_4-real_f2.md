@@ -146,21 +146,21 @@ summary(modsum)
     ## 
     ## Parametric coefficients:
     ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)     1490.20      24.30  61.337   <2e-16 ***
-    ## group.orderedB   -26.86      34.26  -0.784    0.433    
+    ## (Intercept)     1466.73      24.74  59.297   <2e-16 ***
+    ## group.orderedB    24.95      34.89   0.715    0.475    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
     ##                                      edf  Ref.df      F p-value    
-    ## s(measurement.no)                  8.498   8.899 60.056  <2e-16 ***
-    ## s(measurement.no):group.orderedB   1.001   1.001  3.017  0.0824 .  
-    ## s(measurement.no,speaker)        115.677 297.000  2.964  <2e-16 ***
+    ## s(measurement.no)                  8.561   8.921 67.552  <2e-16 ***
+    ## s(measurement.no):group.orderedB   1.056   1.081  0.226   0.644    
+    ## s(measurement.no,speaker)        112.082 297.000  2.960  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.498   Deviance explained = 50.9%
-    ## fREML =  39251  Scale est. = 32574     n = 6136
+    ## R-sq.(adj) =  0.509   Deviance explained = 51.9%
+    ## fREML =  39099  Scale est. = 32614     n = 6107
 
 ### MODEL SUMMARY: 2. Looking at model summary + Bonferroni correction
 
@@ -197,20 +197,20 @@ summary(binsmooth)
     ## 
     ## Parametric coefficients:
     ##             Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)   1490.2       24.3   61.34   <2e-16 ***
+    ## (Intercept)  1466.74      24.73    59.3   <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
     ##                                 edf  Ref.df      F p-value    
-    ## s(measurement.no)             8.498   8.899 60.061  <2e-16 ***
-    ## s(measurement.no):group.bin   2.001   2.001  1.818   0.162    
-    ## s(measurement.no,speaker)   115.677 297.000  2.964  <2e-16 ***
+    ## s(measurement.no)             8.562   8.922 68.330  <2e-16 ***
+    ## s(measurement.no):group.bin   2.000   2.001  0.385   0.681    
+    ## s(measurement.no,speaker)   112.122 297.000  2.962  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.498   Deviance explained = 50.9%
-    ## fREML =  39251  Scale est. = 32574     n = 6136
+    ## R-sq.(adj) =  0.509   Deviance explained = 51.9%
+    ## fREML =  39099  Scale est. = 32614     n = 6107
 
 ### LIKELIHOOD RATIO TESTS: 4. Likelihood Ratio Test using models fitted with ML
 
@@ -257,13 +257,13 @@ compareML(lrt_ML_full, lrt_ML_nested)
     ## Chi-square test of ML scores
     ## -----
     ##           Model    Score Edf Difference    Df p.value Sig.
-    ## 1 lrt_ML_nested 39267.97   6                              
-    ## 2   lrt_ML_full 39266.20   9      1.767 3.000   0.316     
+    ## 1 lrt_ML_nested 39114.66   6                              
+    ## 2   lrt_ML_full 39114.24   9      0.423 3.000   0.838     
     ## 
-    ## AIC difference: 0.37, model lrt_ML_nested has lower AIC.
+    ## AIC difference: 0.34, model lrt_ML_nested has lower AIC.
 
     ## Warning in compareML(lrt_ML_full, lrt_ML_nested): AIC might not be
-    ## reliable, as an AR1 model is included (rho1 = 0.640890, rho2 = 0.640890).
+    ## reliable, as an AR1 model is included (rho1 = 0.635406, rho2 = 0.635406).
 
     ## Warning in compareML(lrt_ML_full, lrt_ML_nested): Only small difference in ML...
 
@@ -312,13 +312,13 @@ compareML(lrt_fREML_full, lrt_fREML_nested)
     ## Chi-square test of fREML scores
     ## -----
     ##              Model    Score Edf Difference    Df   p.value Sig.
-    ## 1 lrt_fREML_nested 39260.50   6                                
-    ## 2   lrt_fREML_full 39250.52   9      9.975 3.000 1.738e-04  ***
+    ## 1 lrt_fREML_nested 39107.10   6                                
+    ## 2   lrt_fREML_full 39098.56   9      8.541 3.000 6.795e-04  ***
     ## 
-    ## AIC difference: 0.11, model lrt_fREML_nested has lower AIC.
+    ## AIC difference: 0.39, model lrt_fREML_nested has lower AIC.
 
     ## Warning in compareML(lrt_fREML_full, lrt_fREML_nested): AIC might not be
-    ## reliable, as an AR1 model is included (rho1 = 0.640890, rho2 = 0.640890).
+    ## reliable, as an AR1 model is included (rho1 = 0.635406, rho2 = 0.635406).
 
 ### LIKELIHOOD RATIO TESTS: 6. Likelihood Ratio Test with fREML trick
 
@@ -369,21 +369,18 @@ compareML(lrt_fREML_trick_full, lrt_fREML_trick_nested)
     ## Chi-square test of fREML scores
     ## -----
     ##                    Model    Score Edf Difference    Df p.value Sig.
-    ## 1 lrt_fREML_trick_nested 39267.33   6                              
-    ## 2   lrt_fREML_trick_full 39266.34   9      0.988 3.000   0.577     
+    ## 1 lrt_fREML_trick_nested 39114.02   6                              
+    ## 2   lrt_fREML_trick_full 39113.66   9      0.363 3.000   0.867     
     ## 
-    ## AIC difference: -0.09, model lrt_fREML_trick_full has lower AIC.
+    ## AIC difference: -0.15, model lrt_fREML_trick_full has lower AIC.
 
     ## Warning in compareML(lrt_fREML_trick_full, lrt_fREML_trick_nested): AIC
-    ## might not be reliable, as an AR1 model is included (rho1 = 0.640890, rho2 =
-    ## 0.640890).
+    ## might not be reliable, as an AR1 model is included (rho1 = 0.635406, rho2 =
+    ## 0.635406).
 
     ## Warning in compareML(lrt_fREML_trick_full, lrt_fREML_trick_nested): Only small difference in fREML...
 
 ### Model comparison with AIC (models fitted with fREML)
-
-As noted in the main text of the paper, the results of this model
-comparison are meaningless.
 
 ``` r
 aic_fREML_full <- bam(f2 ~ group.ordered + 
@@ -416,8 +413,8 @@ AIC(aic_fREML_full, aic_fREML_nested)
 ```
 
     ##                        df      AIC
-    ## aic_fREML_full   129.2954 78376.17
-    ## aic_fREML_nested 129.3640 78376.06
+    ## aic_fREML_full   125.8279 78076.93
+    ## aic_fREML_nested 125.3393 78076.54
 
 ### VISUAL TESTS
 
@@ -434,7 +431,7 @@ plot_smooth(modsum, view="measurement.no", plot_all="group.ordered", rm.ranef=T)
     ## Summary:
     ##  * group.ordered : factor; set to the value(s): A, B. 
     ##  * measurement.no : numeric predictor; with 30 values ranging from 1.000000 to 11.000000. 
-    ##  * speaker : factor; set to the value(s): speaker 12. (Might be canceled as random effect, check below.) 
+    ##  * speaker : factor; set to the value(s): speaker 8. (Might be canceled as random effect, check below.) 
     ##  * NOTE : The following random effects columns are canceled: s(measurement.no,speaker)
     ## 
 
@@ -446,7 +443,7 @@ plot_diff(modsum, view="measurement.no", comp=list(group.ordered=c("A","B")), rm
 
     ## Summary:
     ##  * measurement.no : numeric predictor; with 100 values ranging from 1.000000 to 11.000000. 
-    ##  * speaker : factor; set to the value(s): speaker 12. (Might be canceled as random effect, check below.) 
+    ##  * speaker : factor; set to the value(s): speaker 8. (Might be canceled as random effect, check below.) 
     ##  * NOTE : The following random effects columns are canceled: s(measurement.no,speaker)
     ## 
 

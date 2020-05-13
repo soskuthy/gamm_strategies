@@ -24,6 +24,7 @@ library(ggplot2)
 library(mgcv)
 library(itsadug)
 library(MASS)
+library(lme4)
 ```
 
 ## Data generation
@@ -355,4 +356,70 @@ reference_difference_rand_smooth_10 <-
       data = dat, 
       method = "fREML", discrete = T, nthreads = 1)
 summary(reference_difference_rand_smooth_10)
+```
+
+### An additional mini-type II error simulation for item x effect random effects with lme4
+
+This mini-simulation demonstrates that item x effect random effects lead to decreased power for conventional mixed effects models in the same way that they do for GAMMs.
+
+We first set the parameters for this type II error simulation. We simulate 20 "speakers" who each produce tokens from two groups with slightly different mean values for some phonetic parameter. Tokens from the same speaker are not independent of each other.
+
+```{r}
+# population means for tokens a / b
+mean.a <- 0
+mean.b <- 10
+
+# sd of speaker means around population mean
+sd.a <- 40
+sd.b <- 40
+# correlation within speakers
+rho.sim <- 7/8
+
+n.speakers <- 20
+resid.sd <- 30 # residual standard deviation
+n <- 20
+
+# how many simulation runs?
+iterations <- 1000
+```
+
+We now run the simulation. The two numbers at the end represent power for (i) a model with appropriately specified random intercepts and slopes and (ii) a model with item x effect random effects. The regular method has much higher power than item x effect random effects.
+
+```{r}
+# function for making covariance matrices
+make_cov_matrix <- function (a.sd, b.sd, rho) {
+  matrix(c(a.sd**2, rho*a.sd*b.sd, rho*a.sd*b.sd, b.sd**2), nrow=2)
+}
+
+# vectors for storing results
+ts.regular <- c()
+ts.itemxeffect <- c()
+
+# running the actual simulation
+for (i in 1:iterations) {
+  # generating by-speaker means
+  means <- mvrnorm(n.speakers, c(mean.a, mean.b), 
+                   make_cov_matrix(sd.a, sd.b, rho.sim))
+  # generating individual tokens
+  d.a <- unlist(lapply(means[,1], function (x) rnorm(n, x, resid.sd)))
+  d.b <- unlist(lapply(means[,2], function (x) rnorm(n, x, resid.sd)))
+  # assembling data frame
+  d <- data.frame(y=c(d.a, d.b),
+                group=as.factor(rep(c("a","b"), each=length(d.a))),
+                speaker=as.factor(paste("speaker", rep(1:n.speakers, each=n)))
+                )
+  # adding combined predictor
+  d$speakerGroup <- interaction(d$speaker, d$group)
+  # fitting regular model
+  mod.reg <- suppressWarnings(lmer(y ~ group + (1 + group | speaker),
+                  data=d))
+  # fitting item x effect model
+  mod.ixe <- suppressWarnings(lmer(y ~ group + (1 | speakerGroup),
+                  data=d))
+  ts.regular <- c(ts.regular, summary(mod.reg)$coefficients[2,3])
+  ts.itemxeffect <- c(ts.itemxeffect, summary(mod.ixe)$coefficients[2,3])
+  # cat("\r                 \r", i)
+}
+mean(abs(ts.regular) > 1.96)
+mean(abs(ts.itemxeffect) > 1.96)
 ```

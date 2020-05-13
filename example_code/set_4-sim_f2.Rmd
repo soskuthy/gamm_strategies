@@ -235,8 +235,6 @@ compareML(lrt_fREML_trick_full, lrt_fREML_trick_nested)
 
 ### Model comparison with AIC (models fitted with fREML)
 
-As noted in the main text of the paper, the results of this model comparison are meaningless.
-
 ```{r}
 aic_fREML_full <- bam(f2 ~ group.ordered + 
                       s(measurement.no, bs = "tp", k = 10) + 

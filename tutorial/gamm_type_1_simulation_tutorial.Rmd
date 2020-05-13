@@ -415,7 +415,7 @@ Now that we have run the simulations, let's interpret the results. The code chun
 
 ```{r, echo=FALSE, results="hold"}
 cat("\ttype I error:\tparam.\tsmooth\n")
-cat("random intercept-only\t", 
+cat("rand. intcpt-only\t", 
     map_dbl(rint_out, "parametric_p") %>% `<`(., 0.05) %>% mean(), "\t",
     map_dbl(rint_out, "smooth_p") %>% `<`(., 0.05) %>% mean(), "\n", sep="")
 cat("rand. smooth, tp 3\t",
