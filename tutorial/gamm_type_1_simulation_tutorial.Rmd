@@ -206,24 +206,44 @@ Right now, we're only interested in choosing the right parameters for the AR1 mo
 
 ```{r}
 # random intercept only
-rint_mod_noAR <- bam(f2 ~ s(measurement_no) + s(speaker, bs="re"), data=price, discrete=T)
+rint_mod_noAR <- 
+  bam(f2 ~ 
+        s(measurement_no) + 
+        s(speaker, bs="re"), 
+      data=price, discrete=T)
 
 # random smooth: tp 3
-rsmooth_tp_3_mod_noAR <- bam(f2 ~ s(measurement_no) + s(measurement_no, speaker, bs="fs", m=1, k=3, xt="tp"), data=price, discrete=T)
+rsmooth_tp_3_mod_noAR <- 
+  bam(f2 ~ 
+        s(measurement_no) +
+        s(measurement_no, speaker, bs="fs", m=1, k=3, xt="tp"), 
+      data=price, discrete=T)
 
 # random smooth: tp 10
-rsmooth_tp_10_mod_noAR  <- bam(f2 ~ s(measurement_no) + s(measurement_no, speaker, bs="fs", m=1, k=10, xt="tp"), data=price, discrete=T)
+rsmooth_tp_10_mod_noAR <- 
+  bam(f2 ~ 
+        s(measurement_no) + 
+        s(measurement_no, speaker, bs="fs", m=1, k=10, xt="tp"), 
+      data=price, discrete=T)
 
 # random smooth: cr 3
-rsmooth_cr_3_mod_noAR  <- bam(f2 ~ s(measurement_no) + s(measurement_no, speaker, bs="fs", m=1, k=3, xt="cr"), data=price, discrete=T)
+rsmooth_cr_3_mod_noAR <- 
+  bam(f2 ~ 
+        s(measurement_no) + 
+        s(measurement_no, speaker, bs="fs", m=1, k=3, xt="cr"), 
+      data=price, discrete=T)
 
 # random smooth: cr 10
-rsmooth_cr_10_mod_noAR  <- bam(f2 ~ s(measurement_no) + s(measurement_no, speaker, bs="fs", m=1, k=10, xt="cr"), data=price, discrete=T)
+rsmooth_cr_10_mod_noAR <- 
+  bam(f2 ~ 
+        s(measurement_no) + 
+        s(measurement_no, speaker, bs="fs", m=1, k=10, xt="cr"), 
+      data=price, discrete=T)
 ```
 
 We now inspect the residuals of these models looking for autocorrelation, and save the residual autocorrelation values at lag 1.
 
-```{r, fig.hold='hold', out.width="20%"}
+```{r, fig.show="hold", results="hold", out.width="20%"}
 acf_resid(rint_mod_noAR)
 acf_resid(rsmooth_tp_3_mod_noAR)
 acf_resid(rsmooth_tp_10_mod_noAR)
@@ -239,12 +259,41 @@ start_value_rho(rsmooth_cr_10_mod_noAR)
 
 All the autocorrelation values at lag 1 are very similar, so we'll use the same rho setting for all of our models. Let's start with the estimated value: 0.55. Here are the revised models and the corresponding acf plots.
 
-```{r, fig.hold='hold', out.width="20%"}
-rint_mod <- bam(f2 ~ s(measurement_no) + s(speaker, bs="re"), data=price, discrete=T, AR.start=start_traj, rho=0.55)
-rsmooth_tp_3_mod <- bam(f2 ~ s(measurement_no) + s(measurement_no, speaker, bs="fs", m=1, k=3, xt="tp"), data=price, discrete=T, AR.start=start_traj, rho=0.55)
-rsmooth_tp_10_mod  <- bam(f2 ~ s(measurement_no) + s(measurement_no, speaker, bs="fs", m=1, k=10, xt="tp"), data=price, discrete=T, AR.start=start_traj, rho=0.55)
-rsmooth_cr_3_mod  <- bam(f2 ~ s(measurement_no) + s(measurement_no, speaker, bs="fs", m=1, k=3, xt="cr"), data=price, discrete=T, AR.start=start_traj, rho=0.55)
-rsmooth_cr_10_mod  <- bam(f2 ~ s(measurement_no) + s(measurement_no, speaker, bs="fs", m=1, k=10, xt="cr"), data=price, discrete=T, AR.start=start_traj, rho=0.55)
+```{r, fig.show="hold", results="hold", out.width="20%"}
+rint_mod <- 
+  bam(f2 ~ 
+        s(measurement_no) + 
+        s(speaker, bs="re"), 
+      data=price, discrete=T, 
+      AR.start=start_traj, rho=0.55)
+
+rsmooth_tp_3_mod <- 
+  bam(f2 ~ 
+        s(measurement_no) + 
+        s(measurement_no, speaker, bs="fs", m=1, k=3, xt="tp"), 
+      data=price, discrete=T, 
+      AR.start=start_traj, rho=0.55)
+
+rsmooth_tp_10_mod <- 
+  bam(f2 ~ 
+        s(measurement_no) + 
+        s(measurement_no, speaker, bs="fs", m=1, k=10, xt="tp"), 
+      data=price, discrete=T, 
+      AR.start=start_traj, rho=0.55)
+
+rsmooth_cr_3_mod <- 
+  bam(f2 ~ 
+        s(measurement_no) + 
+        s(measurement_no, speaker, bs="fs", m=1, k=3, xt="cr"), 
+      data=price, discrete=T, 
+      AR.start=start_traj, rho=0.55)
+
+rsmooth_cr_10_mod <- 
+  bam(f2 ~ 
+        s(measurement_no) + 
+        s(measurement_no, speaker, bs="fs", m=1, k=10, xt="cr"), 
+      data=price, discrete=T, 
+      AR.start=start_traj, rho=0.55)
 
 acf_resid(rint_mod)
 acf_resid(rsmooth_tp_3_mod)
@@ -364,7 +413,7 @@ for (i in 1:iterations) {
 
 Now that we have run the simulations, let's interpret the results. The code chunk below calculates false positive rates based on parametric / smooth p-values for each of the five models. Again, this is fairly easy to do manually, so there's no need to necessarily implement something quite as complicated as below.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, results="hold"}
 cat("\ttype I error:\tparam.\tsmooth\n")
 cat("random intercept-only\t", 
     map_dbl(rint_out, "parametric_p") %>% `<`(., 0.05) %>% mean(), "\t",
@@ -387,7 +436,7 @@ Although these results have to be treated with caution due to the small number o
 
 Note that a quick check of the model summary (for the last set of models) shows that a "cr" random smooth with 3 basis functions uses up almost all the wiggliness it is afforded, while a "cr" random smooth with 10 basis functions uses significantly fewer degrees of freedom than the maximum it is allowed (this can be established by comparing the figures in the "edf" column to those in the "Ref.df" column).
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, results="hold"}
 cat("model with cr-3 basis functions:\n")
 summary(rsmooth_tp_3_mod)$s.table
 cat("\nmodel with cr-10 basis functions:\n")
@@ -400,20 +449,25 @@ This suggests that a simpler random smooth might do equally well, and this could
 
 Now that we have fitted a few models, further model criticism using e.g. "gam.check()" is helpful. In this case, the plots below show that there is a relatively minor deviation from normality in the residuals, but they don't reveal any obvious heteroscedascity.
 
-```{r, fig.hold='hold', out.width="25%"}
+```{r, fig.show="hold", out.width="25%"}
 gam.check(rsmooth_cr_10_mod)
 ```
 
 The QQ-plot suggests that the residuals may follow a T-distribution. Following advice in Wieling (2018), we should refit our top-ranked model using the scaled-T family:
 
 ```{r}
-rsmooth_cr_10_mod_sc  <- bam(f2 ~ cat.ord + s(measurement_no) + s(measurement_no, by=cat.ord) + 
-                              s(measurement_no, speaker, bs="fs", m=1, k=10, xt="cr"),
-                            data=price_sample, discrete=T, AR.start=start_traj, rho=0.55,
-                          family="scat")
+rsmooth_cr_10_mod_sc  <- 
+  bam(f2 ~ 
+        cat.ord + 
+        s(measurement_no) + 
+        s(measurement_no, by=cat.ord) + 
+        s(measurement_no, speaker, bs="fs", m=1, k=10, xt="cr"),
+      data=price_sample, discrete=T, 
+      AR.start=start_traj, rho=0.55,
+      family="scat")
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, results="hold"}
 cat("original model:\n")
 summary(rsmooth_cr_10_mod)
 cat("\nmodel with family=\"scat\":\n")
@@ -422,13 +476,13 @@ summary(rsmooth_cr_10_mod_sc)
 
 The model summaries are reassuringly similar. Running gam.check() reveals that the scaled-T family no longer violates distributional assumptions.
 
-```{r, fig.hold='hold', out.width="25%"}
+```{r, fig.show='hold', out.width="25%"}
 gam.check(rsmooth_cr_10_mod_sc)
 ```
 
 It is also instructive to look at the model diagnostics for some of the problematic models:
 
-```{r, fig.hold='hold', out.width="25%"}
+```{r, fig.show='hold', out.width="25%"}
 gam.check(rsmooth_cr_3_mod)
 gam.check(rsmooth_tp_10_mod)
 ```
