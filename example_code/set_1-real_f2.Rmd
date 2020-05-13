@@ -1,0 +1,323 @@
+---
+title: "Models for set 1, Real F2 results (GAMM modelling strategies)"
+author: "Márton Sóskuthy"
+date: "11/05/2020"
+output:
+  md_document:
+    variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This document is a supplement to "Evaluating generalised additive mixed modelling strategies for dynamic speech analysis," relating specifically to the contents of the "real formants" columns of Table 1 in Section 3.1.2. It presents code that illustrates (i) how the resampled data were generated and (ii) the models whose performance is summarised in the "real formants" columns of Table 1.
+
+## Preliminaries
+
+The code below loads the relevant libraries.
+
+```{r, message=F}
+library(ggplot2)
+library(mgcv)
+library(itsadug)
+library(stringr)
+```
+
+## Data generation
+
+The code in this section can be only be used to process the data for type I simulations. Note that the paths in this file will only work if the whole GitHub repository is downloaded and this markdown file is kept in its folder.
+
+The data for this set of simulations consist of real f2 trajectories representing the vowel /aI/ in New Zealand English sampled from a single speaker. No more than 50 contours are sampled from the speaker. Each contour is randomly assigned to one of two groups (A and B).
+
+```{r}
+dat_full <- readRDS("../data/final_data/price_vd_30_speakers.rds")
+
+# we sample a single speaker from this data set
+
+dat <- subset(dat_full, speaker == sample(unique(dat_full$speaker), 1))
+
+# we only take what we need
+# (< 50 trajectories)
+
+dat <- subset(dat, 
+              traj %in% sample(unique(dat$traj), 
+                               size=min(length(unique(dat$traj)), 50)
+              )
+)
+
+# we now add randomly assigned category labels
+
+ids <- unique(dat$traj)
+group.Bs <- sample(ids, round(length(ids)/2))
+dat$group <- "A"
+dat$group[dat$traj %in% group.Bs] <- "B"
+
+# setting up different types of grouping factors
+dat$group.factor <- as.factor(dat$group)
+dat$group.ordered <- as.ordered(dat$group)
+contrasts(dat$group.ordered) <- "contr.treatment"
+dat$group.bin <- as.numeric(dat$group.factor) - 1
+
+# ids ought to be factors  
+dat$traj <- as.factor(dat$traj)
+```
+
+Here is what the data set looks like.
+
+```{r}
+ggplot(dat, aes(x=measurement.no, y=f2, group=traj, col=group)) +
+  geom_line(alpha=0.6) +
+  facet_grid(~group) +
+  theme_bw()
+```
+
+## Models
+
+All the models (and sets of models) from Table 1 are shown below in the same order as in the table. The numbers in the section headers correspond to the row numbers.
+
+### NO SMOOTHS: 1. No components
+
+```{r}
+nocomp <- bam(f2 ~ group.ordered + 
+                   s(measurement.no, bs = "tp", k = 10) + 
+                   s(measurement.no, by = group.ordered, bs = "tp", k = 10), 
+              data = dat, method = "fREML", discrete = T, nthreads = 1)
+summary(nocomp)
+```
+
+### NO SMOOTHS: 2. Rand intcpt (= Random Intercept)
+
+```{r}
+rand_intcpt <- bam(f2 ~ group.ordered + 
+                        s(measurement.no, bs = "tp", k = 10) + 
+                        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+                        s(traj, bs = "re"), 
+                    data = dat, method = "fREML", discrete = T, nthreads = 1)
+summary(rand_intcpt)
+```
+
+### NO SMOOTHS: 3. Rand intcpt + slope (= random intercept + slope)
+
+```{r}
+rand_intcpt_slope <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(traj, bs = "re") + 
+        s(traj, measurement.no, bs = "re"), 
+      data = dat, method = "fREML", discrete = T, nthreads = 1) 
+summary(rand_intcpt_slope)
+```
+
+### TP SMOOTHS: 4. Rand smooth, tp, 3 bs
+
+```{r}
+rand_smooth_tp_3 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, traj, bs = "fs", m = 1, xt = "tp", k = 3), 
+      data = dat, method = "fREML", discrete = T, nthreads = 1)
+summary(rand_smooth_tp_3)
+```
+
+### TP SMOOTHS: 5. Rand smooth, tp, 5 bs
+
+```{r}
+rand_smooth_tp_5 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, traj, bs = "fs", m = 1, xt = "tp", k = 5), 
+      data = dat, method = "fREML", discrete = T, nthreads = 1)
+summary(rand_smooth_tp_5)
+```
+
+### TP SMOOTHS: 6. Rand smooth, tp, 10 bs
+
+```{r}
+rand_smooth_tp_10 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, traj, bs = "fs", m = 1, xt = "tp", k = 10), 
+      data = dat, method = "fREML", discrete = T, nthreads = 1)
+summary(rand_smooth_tp_10)
+```
+
+### TP SMOOTHS: 7. Rand smooth, tp, 15 bs
+
+This model was not fitted to these data.
+
+### TP SMOOTHS: 8. Rand smooth, tp, 20 bs
+
+This model was not fitted to these data.
+
+### TP SMOOTHS: 9. Rand smooth, tp, gam.check
+
+The model fitted in this section uses random smooths where the number of basis functions (k) is determined using the gam.check() function: after fitting an initial model with a relatively low value of k, gam.check() is used to see whether more wiggliness is necessary (essentially, whether the smooths use up all the degrees of freedom afforded to them). If gam.check() suggests that more wiggliness is necessary, this procedure is repeated again using a model with a higher value of k.
+
+Below is a convenience function for extracting the relevant p-value from the output of gam.check.
+
+```{r}
+gam.check.p.value <- function (mod, which.line) {
+  str.out <- capture.output(gam.check(mod))
+  relevant.line <- str.out[grep(which.line, str.out)]
+  p.value <- as.numeric(str_match(relevant.line, "([0-9.]*)[ *.]*$")[[2]])
+  return(p.value)
+}
+```
+
+Fitting the models.
+
+```{r}
+# what k's should be tried?
+k_min = 4
+k_max = 10
+k_step = 2
+```
+
+```{r, fig.show='hide'}
+for (k in seq(k_min,k_max,k_step)) {
+  cat("fitting model with  k =", k, "\n")
+  
+  # fitting model
+  
+  rand_smooth_tp_gam.check <- 
+    bam(f2 ~ group.ordered + 
+          s(measurement.no, bs = "tp", k = 10) + 
+          s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+          s(measurement.no, traj, bs = "fs", m = 1, xt = "tp", k = k), 
+        data = dat, method = "fREML", discrete = T, nthreads = 1)
+  
+  # check whether more complexity is needed using gam.check
+  
+  if (gam.check.p.value(rand_smooth_tp_gam.check, "traj") >= 0.05 | k == k_max) {
+    print(summary(rand_smooth_tp_gam.check))
+    break
+  }
+}
+``` 
+
+### CR SMOOTHS: 10. Rand smooth, cr, 3 bs
+
+```{r}
+rand_smooth_cr_3 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, traj, bs = "fs", m = 1, xt = "cr", k = 3), 
+      data = dat, method = "fREML", discrete = T, nthreads = 1)
+summary(rand_smooth_cr_3)
+```
+
+### CR SMOOTHS: 11. Rand smooth, cr, 5 bs
+
+```{r}
+rand_smooth_cr_5 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, traj, bs = "fs", m = 1, xt = "cr", k = 5), 
+      data = dat, method = "fREML", discrete = T, nthreads = 1)
+summary(rand_smooth_cr_5)
+```
+
+### CR SMOOTHS: 12. Rand smooth, cr, 10 bs
+
+```{r}
+rand_smooth_cr_10 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, traj, bs = "fs", m = 1, xt = "cr", k = 10), 
+      data = dat, method = "fREML", discrete = T, nthreads = 1)
+summary(rand_smooth_cr_10)
+```
+
+### CR SMOOTHS: 13. Rand smooth, cr, 15 bs
+
+This model was not fitted to these data.
+
+### CR SMOOTHS: 14. Rand smooth, cr, 20 bs
+
+This model was not fitted to these data.
+
+### CR SMOOTHS: 15. Rand smooth, cr, gam.check
+
+The model fitted in this section uses random smooths where the number of basis functions (k) is determined using the gam.check() function: after fitting an initial model with a relatively low value of k, gam.check() is used to see whether more wiggliness is necessary (essentially, whether the smooths use up all the degrees of freedom afforded to them). If gam.check() suggests that more wiggliness is necessary, this procedure is repeated again using a model with a higher value of k.
+
+Below is a convenience function for extracting the relevant p-value from the output of gam.check.
+
+```{r}
+gam.check.p.value <- function (mod, which.line) {
+  str.out <- capture.output(gam.check(mod))
+  relevant.line <- str.out[grep(which.line, str.out)]
+  p.value <- as.numeric(str_match(relevant.line, "([0-9.]*)[ *.]*$")[[2]])
+  return(p.value)
+}
+```
+
+Fitting the models.
+
+```{r}
+# what k's should be tried?
+k_min = 4
+k_max = 10
+k_step = 2
+```
+
+```{r, fig.show='hide'}
+for (k in seq(k_min,k_max,k_step)) {
+  cat("fitting model with  k =", k, "\n")
+  
+  # fitting model
+  
+  rand_smooth_cr_gam.check <- 
+    bam(f2 ~ group.ordered + 
+          s(measurement.no, bs = "tp", k = 10) + 
+          s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+          s(measurement.no, traj, bs = "fs", m = 1, xt = "cr", k = k), 
+        data = dat, method = "fREML", discrete = T, nthreads = 1)
+  
+  # check whether more complexity is needed using gam.check
+  
+  if (gam.check.p.value(rand_smooth_cr_gam.check, "traj") >= 0.05 | k == k_max) {
+    print(summary(rand_smooth_cr_gam.check))
+    break
+  }
+}
+``` 
+
+### 16. AR1
+
+First fitting model without AR component in order to estimate rho. This is equivalent to the nocomp model above.
+
+```{r}
+nocomp <- bam(f2 ~ group.ordered + 
+                      s(measurement.no, bs = "tp", k = 10) + 
+                      s(measurement.no, by = group.ordered, bs = "tp", k = 10), 
+                    data = dat, method = "fREML", discrete = T, nthreads = 1)
+```
+
+Extracting rho.
+
+```{r}
+rho <- start_value_rho(nocomp)
+cat("rho =", rho, "\n")
+```
+
+Fitting model with AR1
+
+```{r}
+AR1 <- bam(f2 ~ group.ordered + 
+             s(measurement.no, bs = "tp", k = 10) + 
+             s(measurement.no, by = group.ordered, bs = "tp", k = 10), 
+           data = dat, 
+           AR.start = dat$start, rho = rho, 
+           method = "fREML", discrete = T, nthreads = 1)
+summary(AR1)
+```

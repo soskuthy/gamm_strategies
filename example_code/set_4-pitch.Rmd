@@ -1,0 +1,208 @@
+---
+title: "Models for set 2, Pitch results (GAMM modelling strategies)"
+author: "Márton Sóskuthy"
+date: "12/05/2020"
+output:
+  md_document:
+    variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This document is a supplement to "Evaluating generalised additive mixed modelling strategies for dynamic speech analysis," relating specifically to the contents of the "real pitch" columns of Table 4 in Section 3.4.2. It presents code that illustrates (i) how the resampled data were generated and (ii) the models whose performance is summarised in the "real pitch" columns of Table 4.
+
+## Preliminaries
+
+The code below loads the relevant libraries.
+
+```{r, message=F}
+library(ggplot2)
+library(mgcv)
+library(itsadug)
+library(stringr)
+library(dplyr)
+```
+
+## Data generation
+
+The code in this section can be only be used to process the data for type I simulations. Note that the paths in this file will only work if the whole GitHub repository is downloaded and this markdown file is kept in its folder.
+
+The data for this set of simulations consist of real pitch trajectories representing contrastive focus in Standard German. All contours (max. 20) are used from each of the 27 speakers in the data set. Each speaker is randomly assigned to one of two groups (A and B). The difference between males and females has been residualised out of the f0 measurements, which are also logged (but not normalised otherwise).
+
+```{r}
+dat <- readRDS("../data/final_data/pitch_contr_27_speakers.rds")
+
+# we now add randomly assigned category labels
+
+ids <- unique(dat$speaker)
+group.Bs <- sample(ids, round(length(ids)/2))
+dat$group <- "A"
+dat$group[dat$speaker %in% group.Bs] <- "B"
+
+# setting up different types of grouping factors
+dat$group.factor <- as.factor(dat$group)
+dat$group.ordered <- as.ordered(dat$group)
+contrasts(dat$group.ordered) <- "contr.treatment"
+dat$group.bin <- as.numeric(dat$group.factor) - 1
+
+# ids ought to be factors  
+dat$traj <- as.factor(dat$traj)
+dat$speaker <- as.factor(dat$speaker)
+
+# dat$start has already been added at data prep stage (for AR.start, i.e. for autoregressive error models)
+```
+
+Here is what the data set looks like.
+
+```{r}
+ggplot(dat, aes(x=measurement.no, y=f0_log_norm, group=traj, col=group)) +
+  geom_line(alpha=0.6) +
+  facet_wrap(~speaker) +
+  theme_bw()
+```
+
+## Methods of significance testing
+
+All the models (and sets of models) from Table 4 are shown below in the same order as in the table. The numbers in the section headers correspond to the row numbers. Note that all models contain AR1 components to deal with dependencies within trajectories. The rho value used for these AR1 components is taken from a single model fitted without any random structures. This model is estimated below.
+
+```{r}
+# thin
+rho_mod <- bam(f0_log_norm ~ group.ordered + 
+                     s(measurement.no, bs = "tp", k = 20) + 
+                     s(measurement.no, by = group.ordered, bs = "tp", k = 20), 
+                   data = dat, method = "fREML", discrete = T, nthreads = 1)
+
+rho <- start_value_rho(rho_mod)
+```
+
+### MODEL SUMMARY: 1. Looking at model summary
+
+```{r}
+modsum <- bam(f0_log_norm ~ group.ordered + 
+                      s(measurement.no, bs = "tp", k = 20) + 
+                      s(measurement.no, by = group.ordered, bs = "tp", k = 20) +
+                      s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10), 
+                    data = dat, 
+                    AR.start = dat$start, rho = rho, 
+                    method = "fREML", discrete = T, nthreads = 1)
+summary(modsum)
+```
+
+### MODEL SUMMARY: 2. Looking at model summary + Bonferroni correction
+
+For the Bonferroni correction, the alpha-level of the parametric and smooth terms is lowered to 0.025. This does not require fitting a separate model.
+
+### MODEL SUMMARY: 3. Binary smooth
+
+```{r}
+binsmooth <- bam(f0_log_norm ~ s(measurement.no, bs = "tp", k = 20) + 
+                      s(measurement.no, by = group.bin, bs = "tp", k = 20) +
+                      s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10), 
+                    data = dat, 
+                    AR.start = dat$start, rho = rho, 
+                    method = "fREML", discrete=T, nthreads=1)
+summary(binsmooth)
+```
+
+### LIKELIHOOD RATIO TESTS: 4. Likelihood Ratio Test using models fitted with ML
+
+Please note that these models may take quite a while to fit (5-10 minutes).
+
+```{r}
+lrt_ML_full <- bam(f0_log_norm ~ group.ordered + 
+                      s(measurement.no, bs = "tp", k = 20) + 
+                      s(measurement.no, by = group.ordered, bs = "tp", k = 20) +
+                      s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10), 
+                    data = dat, 
+                    AR.start = dat$start, rho = rho, 
+                    method = "ML")
+lrt_ML_nested <- bam(f0_log_norm ~ # group.ordered + 
+                      s(measurement.no, bs = "tp", k = 20) + 
+                      # s(measurement.no, by = group.ordered, bs = "tp", k = 20) +
+                      s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10), 
+                    data = dat, 
+                    AR.start = dat$start, rho = rho, 
+                    method = "ML")
+compareML(lrt_ML_full, lrt_ML_nested)
+```
+
+### LIKELIHOOD RATIO TESTS: 5. Likelihood Ratio Test using models fitted with fREML
+
+As noted in the main text of the paper, the results of this model comparison are meaningless.
+
+```{r}
+lrt_fREML_full <- bam(f0_log_norm ~ group.ordered + 
+                      s(measurement.no, bs = "tp", k = 20) + 
+                      s(measurement.no, by = group.ordered, bs = "tp", k = 20) +
+                      s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10), 
+                    data = dat, 
+                    AR.start = dat$start, rho = rho, 
+                    method = "fREML", discrete=T, nthreads=1)
+lrt_fREML_nested <- bam(f0_log_norm ~ # group.ordered + 
+                      s(measurement.no, bs = "tp", k = 20) + 
+                      # s(measurement.no, by = group.ordered, bs = "tp", k = 20) +
+                      s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10), 
+                    data = dat, 
+                    AR.start = dat$start, rho = rho, 
+                    method = "fREML", discrete=T, nthreads=1)
+compareML(lrt_fREML_full, lrt_fREML_nested)
+```
+
+### LIKELIHOOD RATIO TESTS: 6. Likelihood Ratio Test with fREML trick
+
+For this model, fixed effects are estimated as random effects, which makes model comparison based on models fitted with (f)REML valid in principle.
+
+```{r}
+lrt_fREML_trick_full <- bam(f0_log_norm ~ s(group.ordered, bs="re") + 
+                      s(measurement.no, bs = "tp", k = 20) + 
+                      s(measurement.no, by = group.ordered, bs = "tp", k = 20) +
+                      s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10), 
+                    data = dat, 
+                    AR.start = dat$start, rho = rho, 
+                    method = "fREML", discrete=T, nthreads=1,
+                    select=T)
+lrt_fREML_trick_nested <- bam(f0_log_norm ~ # s(group.ordered, bs="re") + 
+                      s(measurement.no, bs = "tp", k = 20) + 
+                      # s(measurement.no, by = group.ordered, bs = "tp", k = 20) +
+                      s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10), 
+                    data = dat, 
+                    AR.start = dat$start, rho = rho, 
+                    method = "fREML", discrete=T, nthreads=1,
+                    select=T)
+compareML(lrt_fREML_trick_full, lrt_fREML_trick_nested)
+```
+
+### Model comparison with AIC (models fitted with fREML)
+
+As noted in the main text of the paper, the results of this model comparison are meaningless.
+
+```{r}
+aic_fREML_full <- bam(f0_log_norm ~ group.ordered + 
+                      s(measurement.no, bs = "tp", k = 20) + 
+                      s(measurement.no, by = group.ordered, bs = "tp", k = 20) +
+                      s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10), 
+                    data = dat, 
+                    AR.start = dat$start, rho = rho, 
+                    method = "fREML", discrete=T, nthreads=1)
+aic_fREML_nested <- bam(f0_log_norm ~ # group.ordered + 
+                      s(measurement.no, bs = "tp", k = 20) + 
+                      # s(measurement.no, by = group.ordered, bs = "tp", k = 20) +
+                      s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10), 
+                    data = dat, 
+                    AR.start = dat$start, rho = rho, 
+                    method = "fREML", discrete=T, nthreads=1)
+AIC(aic_fREML_full, aic_fREML_nested)
+```
+
+### VISUAL TESTS
+
+This is not a detailed implementation of the percentage-cut-off-based reasoning examined in the paper, simply some example code that can be used to generate (i) prediction plots with confidence intervals for the two groups and (ii) plots of the estimated difference between the groups. Note also that these pred
+
+```{r}
+plot_smooth(modsum, view="measurement.no", plot_all="group.ordered", rm.ranef=T)
+plot_diff(modsum, view="measurement.no", comp=list(group.ordered=c("A","B")), rm.ranef=T)
+```

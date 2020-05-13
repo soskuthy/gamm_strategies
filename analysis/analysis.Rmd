@@ -1,0 +1,755 @@
+---
+title: "GAMM Modelling Strategies paper (JPhon): Analysis"
+output: html_notebook
+---
+
+```{r "setup", include=FALSE}
+require("knitr")
+# setting workind dir
+opts_knit$set(root.dir = "~/documents/research/projects/dynamic-gam/gamm_strategies")
+```
+
+Importing relevant libraries & main data set.
+
+```{r}
+library(mgcv)
+library(itsadug)
+library(data.table)
+library(stringr)
+library(xtable)
+library(tidyverse)
+
+dat <- readRDS("gamm_sim_master.rds")
+```
+
+## AR models & random effects for capturing autocorrelation
+
+First, let's have a look at how well different types of random structures and AR models do at capturing autocorrelation within (relatively) smooth trajectories. We'll only look at a subset of the data at this point: `sim.type == "simple"`. We'll go straight for a well-formatted table.
+
+All three data types go in a single table, but type II error rates and processing time / memory info are only provided for the simulated data.
+
+```{r}
+dat.simple.all <- dat[dat$sim.type=="simple" & !(AR=="AR_est" & ranef!="noranef"),]
+# aggregating data
+dat.simple.all.aggr <- 
+  dat.simple.all[,.(smooth.type.1=mean(smooth.p[error.type=="type_1"] < 0.05),
+                    par.type.1=mean(par.p[error.type=="type_1"] < 0.05),
+                    smooth.power=mean(smooth.p[error.type=="type_2"] < 0.05),
+                    par.power=mean(par.p[error.type=="type_2"] < 0.05),
+                    time.med=median(time),
+                    memory.med=median(memory)),
+                  by=.(data.type,ranef,AR)]
+kable(dat.simple.all.aggr)
+
+dat.simple.all.aggr$ranef <- recode(dat.simple.all.aggr$ranef, 
+                                 gamcheck_tp_4_10_2="gamcheck_tp",
+                                 gamcheck_cr_4_10_2="gamcheck_cr",
+                                 gamcheck_tp_4_16_3="gamcheck_tp",
+                                 gamcheck_cr_4_16_3="gamcheck_cr")
+
+# creating output table for formant data
+# record timing / memory for dense data, set aside
+sf.time.mem <- dat.simple.all.aggr[data.type=="simulated",c("ranef","AR","time.med","memory.med")]
+# recode gam.check
+
+# go to wide format
+sf.out <- dcast.data.table(dat.simple.all.aggr[!(!ranef=="noranef" & AR=="AR_est"),], ranef + AR ~ data.type, value.var=c("par.type.1","smooth.type.1","par.power","smooth.power"))
+# merge back with timing / memory stuff
+sf.out <- merge(sf.out, sf.time.mem, by=c("ranef","AR"), all.x=T)
+# reorder rows
+sf.out <- sf.out[c(4:6,15,16,12:14,2,10,11,7:9,1,3),]
+# new column that codes ranef and AR together
+sf.out[,model.component:=ifelse(AR=="AR_est","AR1",ranef)]
+sf.out$model.component <- recode(sf.out$model.component,
+                                 noranef="no components",
+                                 rintcpt="r intcpt",
+                                 rslope="r intcpt + slope",
+                                 rsmooth_tp_3="r smooth, tp, 3 bs",
+                                 rsmooth_tp_5="r smooth, tp, 5 bs",
+                                 rsmooth_tp_10="r smooth, tp, 10 bs",
+                                 rsmooth_tp_15="r smooth, tp, 15 bs",
+                                 rsmooth_tp_20="r smooth, tp, 20 bs",
+                                 rsmooth_cr_3="r smooth, cr, 3 bs",
+                                 rsmooth_cr_5="r smooth, cr, 5 bs",
+                                 rsmooth_cr_10="r smooth, cr, 10 bs",
+                                 rsmooth_cr_15="r smooth, cr, 15 bs",
+                                 rsmooth_cr_20="r smooth, cr, 20 bs",
+                                 gamcheck_tp="r smooth, tp, gam.check",
+                                 gamcheck_cr="r smooth, cr, gam.check")
+sf.out <- dplyr::select(sf.out,
+                        -ranef, -AR,
+                        -par.power_formants, -par.power_pitch, -par.power_simulated,
+                        -smooth.power_formants, -smooth.power_pitch)
+setcolorder(sf.out, c("model.component",
+                      "par.type.1_formants","smooth.type.1_formants",
+                      "par.type.1_pitch","smooth.type.1_pitch",
+                      "par.type.1_simulated","smooth.type.1_simulated","smooth.power_simulated",
+                      "memory.med","time.med"))
+colnames(sf.out) <- c("model component",
+                      "type I","type I",
+                      "type I","type I",
+                      "type I","type I","power",
+                      "mem.","time")
+sf.out <- as.data.frame(sf.out)
+for (i in 2:8) {
+  sf.out[,i] <- sprintf("%.3f", sf.out[,i])
+}
+for (i in 9:10) {
+  sf.out[,i] <- sprintf("%.1f", sf.out[,i])
+}
+
+for (i in 2:8) {
+  if (colnames(sf.out)[i]=="type I") {
+    for (j in 1:nrow(sf.out)) {
+      if (sf.out[j,i]!="NA" && as.numeric(sf.out[j,i]) > 0.1) {
+        sf.out[j,i] <- paste0("\\color{lightgray} ",sf.out[j,i])
+        if (colnames(sf.out)[i+1]=="power") {
+          sf.out[j,i+1] <- paste0("\\color{lightgray} ",sf.out[j,i+1])
+        }
+      }
+    }
+  }
+}
+for (i in 2:10) {
+  sf.out[sf.out[,i]=="NA",i] <- "--"
+}
+sf.str.out <- print(xtable(sf.out), include.rownames=FALSE,booktabs = TRUE,
+      sanitize.colnames.function=function (x) {paste0("\\textsc{",x,"}")},
+      sanitize.text.function=function (x) {x})
+sf.str.out <- gsub(
+  "\\\\begin\\{tabular\\}\\{l*\\}", 
+  "\\\\begin{tabular}{lrr@{\\\\hspace{1.8em}}rr@{\\\\hspace{1.8em}}rrr@{\\\\hspace{1.8em}}rr}", sf.str.out)
+sf.str.out <- gsub("toprule",
+"toprule 
+  & \\\\multicolumn{2}{c@{\\\\hspace{1.8em}}}{\\\\textsc{real formants}} & \\\\multicolumn{2}{c@{\\\\hspace{1.8em}}}{\\\\textsc{real pitch}} & \\\\multicolumn{3}{c@{\\\\hspace{1.8em}}}{\\\\textsc{simulated formants}}\\\\\\\\ 
+\\\\cmidrule(l{.5em}r{1.7em}){2-3}\\\\cmidrule(l{.5em}r{1.7em}){4-5}\\\\cmidrule(l{.5em}r{1.7em}){6-8}
+  & \\\\multicolumn{1}{c}{\\\\textsc{param.}} & \\\\multicolumn{1}{c@{\\\\hspace{1.8em}}}{\\\\textsc{smooth}} &
+    \\\\multicolumn{1}{c}{\\\\textsc{param.}} & \\\\multicolumn{1}{c@{\\\\hspace{1.8em}}}{\\\\textsc{smooth}} &
+    \\\\multicolumn{1}{c}{\\\\textsc{param.}} & \\\\multicolumn{2}{c@{\\\\hspace{1.8em}}}{\\\\textsc{smooth}} & & \\\\\\\\
+\\\\cmidrule(lr{.5em}){2-2}\\\\cmidrule(l{.5em}r{1.7em}){3-3}
+\\\\cmidrule(lr{.5em}){4-4}\\\\cmidrule(l{.5em}r{1.7em}){5-5}
+\\\\cmidrule(lr{.5em}){6-6}\\\\cmidrule(l{.5em}r{1.7em}){7-8}", sf.str.out)
+sf.str.out <- gsub("table","table*",sf.str.out)
+clip <- pipe("pbcopy", "w")
+write(sf.str.out, file=clip)                               
+close(clip)
+#cat(str.out)
+```
+
+Distribution of k values in gam.check?
+
+```{r}
+# formants
+hist(unlist(dat.simple.all[startsWith(ranef,"gamcheck") & data.type=="formants" & error.type=="type_1","random.smooth.k"]))
+# pitch, thin
+hist(unlist(dat.simple.all[startsWith(ranef,"gamcheck") & data.type=="pitch" & error.type=="type_1","random.smooth.k"]))
+# simulated formants
+hist(unlist(dat.simple.all[startsWith(ranef,"gamcheck") & data.type=="simulated" & error.type=="type_1","random.smooth.k"]))
+```
+
+
+## Random effects for capturing across-group patterns
+
+`sim.type == "complex_across"`.
+
+```{r}
+dat.ca.all <- dat[sim.type=="complex_across" & ((AR=="noAR" & data.type=="simulated") | (AR=="AR_est" & data.type!="simulated")),]
+# aggregating data
+dat.ca.all.aggr <- 
+  dat.ca.all[,.(smooth.type.1=mean(smooth.p[error.type=="type_1"] < 0.05),
+                    par.type.1=mean(par.p[error.type=="type_1"] < 0.05),
+                    smooth.power=mean(smooth.p[error.type=="type_2"] < 0.05),
+                    par.power=mean(par.p[error.type=="type_2"] < 0.05),
+                    time.med=median(time),
+                    memory.med=median(memory)),
+                  by=.(data.type,ranef,AR)]
+kable(dat.ca.all.aggr)
+
+dat.ca.all.aggr$ranef <- gsub("noranef[+]","", dat.ca.all.aggr$ranef)
+dat.ca.all.aggr$ranef <- recode(dat.ca.all.aggr$ranef, 
+                                 `gamcheck_tp_4_10_3`="gamcheck_tp",
+                                 `gamcheck_cr_4_10_3`="gamcheck_cr",
+                                 `gamcheck_tp_4_16_3`="gamcheck_tp",
+                                 `gamcheck_cr_4_16_3`="gamcheck_cr")
+
+# creating output table for formant data
+# record timing / memory for dense data, set aside
+sf.time.mem <- dat.ca.all.aggr[data.type=="simulated",c("ranef","time.med","memory.med")]
+# recode gam.check
+
+# go to wide format
+sf.out <- dcast.data.table(dat.ca.all.aggr, ranef ~ data.type, value.var=c("par.type.1","smooth.type.1","par.power","smooth.power"))
+# merge back with timing / memory stuff
+sf.out <- merge(sf.out, sf.time.mem, by=c("ranef"), all.x=T)
+# reorder rows
+sf.out <- sf.out[c(3:5,12,13,10,11,2,8,9,6,7,1),]
+# new column that codes ranef
+sf.out[,model.component:=ranef]
+sf.out$model.component <- recode(sf.out$model.component,
+                                 noranef="no components",
+                                 rintcpt="r intcpt",
+                                 rslope="r intcpt + slope",
+                                 rsmooth_tp_3="r smooth, tp, 3 bs",
+                                 rsmooth_tp_5="r smooth, tp, 5 bs",
+                                 rsmooth_tp_10="r smooth, tp, 10 bs",
+                                 rsmooth_tp_15="r smooth, tp, 15 bs",
+                                 rsmooth_cr_3="r smooth, cr, 3 bs",
+                                 rsmooth_cr_5="r smooth, cr, 5 bs",
+                                 rsmooth_cr_10="r smooth, cr, 10 bs",
+                                 rsmooth_cr_15="r smooth, cr, 15 bs",
+                                 gamcheck_tp="r smooth, tp, gam.check",
+                                 gamcheck_cr="r smooth, cr, gam.check")
+sf.out <- dplyr::select(sf.out,
+                        -ranef,
+                        -par.power_formants, -par.power_pitch, -par.power_simulated,
+                        -smooth.power_formants, -smooth.power_pitch)
+setcolorder(sf.out, c("model.component",
+                      "par.type.1_formants","smooth.type.1_formants",
+                      "par.type.1_pitch","smooth.type.1_pitch",
+                      "par.type.1_simulated","smooth.type.1_simulated","smooth.power_simulated",
+                      "memory.med","time.med"))
+colnames(sf.out) <- c("model component",
+                      "type I","type I",
+                      "type I","type I",
+                      "type I","type I","power",
+                      "mem.","time")
+sf.out <- as.data.frame(sf.out)
+for (i in 2:8) {
+  sf.out[,i] <- sprintf("%.3f", sf.out[,i])
+}
+for (i in 9:10) {
+  sf.out[,i] <- sprintf("%.1f", sf.out[,i])
+}
+
+for (i in 2:8) {
+  if (colnames(sf.out)[i]=="type I") {
+    for (j in 1:nrow(sf.out)) {
+      if (sf.out[j,i]!="NA" && as.numeric(sf.out[j,i]) > 0.1) {
+        sf.out[j,i] <- paste0("\\color{lightgray} ",sf.out[j,i])
+        if (colnames(sf.out)[i+1]=="power") {
+          sf.out[j,i+1] <- paste0("\\color{lightgray} ",sf.out[j,i+1])
+        }
+      }
+    }
+  }
+}
+for (i in 2:10) {
+  sf.out[sf.out[,i]=="NA",i] <- "--"
+}
+sf.str.out <- print(xtable(sf.out), include.rownames=FALSE,booktabs = TRUE,
+      sanitize.colnames.function=function (x) {paste0("\\textsc{",x,"}")},
+      sanitize.text.function=function (x) {x})
+sf.str.out <- gsub(
+  "\\\\begin\\{tabular\\}\\{l*\\}", 
+  "\\\\begin{tabular}{lrr@{\\\\hspace{1.8em}}rr@{\\\\hspace{1.8em}}rrr@{\\\\hspace{1.8em}}rr}", sf.str.out)
+sf.str.out <- gsub("toprule",
+"toprule 
+  & \\\\multicolumn{2}{c@{\\\\hspace{1.8em}}}{\\\\textsc{real formants}} & \\\\multicolumn{2}{c@{\\\\hspace{1.8em}}}{\\\\textsc{real pitch}} & \\\\multicolumn{3}{c@{\\\\hspace{1.8em}}}{\\\\textsc{simulated formants}}\\\\\\\\ 
+\\\\cmidrule(l{.5em}r{1.7em}){2-3}\\\\cmidrule(l{.5em}r{1.7em}){4-5}\\\\cmidrule(l{.5em}r{1.7em}){6-8}
+  & \\\\multicolumn{1}{c}{\\\\textsc{param.}} & \\\\multicolumn{1}{c@{\\\\hspace{1.8em}}}{\\\\textsc{smooth}} &
+    \\\\multicolumn{1}{c}{\\\\textsc{param.}} & \\\\multicolumn{1}{c@{\\\\hspace{1.8em}}}{\\\\textsc{smooth}} &
+    \\\\multicolumn{1}{c}{\\\\textsc{param.}} & \\\\multicolumn{2}{c@{\\\\hspace{1.8em}}}{\\\\textsc{smooth}} & & \\\\\\\\
+\\\\cmidrule(lr{.5em}){2-2}\\\\cmidrule(l{.5em}r{1.7em}){3-3}
+\\\\cmidrule(lr{.5em}){4-4}\\\\cmidrule(l{.5em}r{1.7em}){5-5}
+\\\\cmidrule(lr{.5em}){6-6}\\\\cmidrule(l{.5em}r{1.7em}){7-8}", sf.str.out)
+sf.str.out <- gsub("table","table*",sf.str.out)
+clip <- pipe("pbcopy", "w")
+write(sf.str.out, file=clip)                               
+close(clip)
+#cat(str.out)
+```
+
+Distribution of k values in gam.check?
+
+```{r}
+# formants
+hist(unlist(dat.ca.all[startsWith(ranef,"noranef+gamcheck") & data.type=="formants" & error.type=="type_1","random.smooth.k"]))
+# pitch, thin
+hist(unlist(dat.ca.all[startsWith(ranef,"noranef+gamcheck") & data.type=="pitch" & error.type=="type_1","random.smooth.k"]))
+# simulated formants
+hist(unlist(dat.ca.all[startsWith(ranef,"noranef+gamcheck") & data.type=="simulated" & error.type=="type_1","random.smooth.k"]))
+```
+
+
+
+## Random effects for capturing within-group patterns
+
+`sim.type == "complex_within"`.
+
+```{r}
+dat.cw.formants <- dat[dat$sim.type=="complex_within" & dat$data.type=="simulated",]
+# aggregating data
+dat.cw.formants.aggr <- 
+  dat.cw.formants[,.(smooth.type.1=mean(smooth.p[error.type=="type_1"] < 0.05),
+                         par.type.1=mean(par.p[error.type=="type_1"] < 0.05),
+                         smooth.power=mean(smooth.p[error.type=="type_2"] < 0.05),
+                         par.power=mean(par.p[error.type=="type_2"] < 0.05),
+                         time.med=median(time),
+                         memory.med=median(memory)),
+                      by=.(data.density,ranef)]
+kable(dat.cw.formants.aggr)
+
+# creating output table for formant data
+# record timing / memory for dense data, set aside
+#cwf.time.mem <- dat.cw.formants.aggr[data.density=="dense",c("ranef","time.med","memory.med")]
+# go to wide format
+cwf.out <- dcast.data.table(dat.cw.formants.aggr, ranef ~ ., value.var=c("par.type.1","smooth.type.1","par.power","smooth.power","time.med","memory.med"))
+# reorder rows
+cwf.out <- cwf.out[c(2,3,1,14,15,13,5,6,4,11,12,10,8,9,7),]
+# new column that codes ranef
+cwf.out$ranef <- gsub("noranef[+]","",cwf.out$ranef)
+cwf.out$model.component <- recode(cwf.out$ranef,
+                                 `rsmooth_cr_3`="cr, 3 bs",
+                                 `rsmooth_cr_5`="cr, 5 bs",
+                                 `rsmooth_cr_10`="cr, 10 bs",
+                                 `rsmoothslope_cr_3`="cr, 3 bs",
+                                 `rsmoothslope_cr_5`="cr, 5 bs",
+                                 `rsmoothslope_cr_10`="cr, 10 bs",
+                                 `rsmoothcrossed_cr_3`="cr, 3 bs",
+                                 `rsmoothcrossed_cr_5`="cr, 5 bs",
+                                 `rsmoothcrossed_cr_10`="cr, 10 bs",
+                                 `rsmoothsep_cr_3`="cr, 3 bs",
+                                 `rsmoothsep_cr_5`="cr, 5 bs",
+                                 `rsmoothsep_cr_10`="cr, 10 bs",
+                                 `rsmoothdiff_cr_3`="cr, 3 bs",
+                                 `rsmoothdiff_cr_5`="cr, 5 bs",
+                                 `rsmoothdiff_cr_10`="cr, 10 bs"
+                                 )
+cwf.out <- cwf.out[,-c(1)]
+setcolorder(cwf.out, c("model.component",
+                      "par.type.1","par.power",
+                      "smooth.type.1","smooth.power",
+                      "memory.med","time.med"))
+colnames(cwf.out) <- c("model component",
+                      "type I","power",
+                      "type I","power",
+                      "memory","time")
+cwf.out <- as.data.frame(cwf.out)
+for (i in 2:5) {
+  cwf.out[,i] <- sprintf("%.3f", cwf.out[,i])
+}
+for (i in 6:7) {
+  cwf.out[,i] <- sprintf("%.1f", cwf.out[,i])
+}
+
+for (i in 2:5) {
+  if (colnames(cwf.out)[i]=="type I") {
+    for (j in 1:nrow(cwf.out)) {
+      if (cwf.out[j,i]!="NA" && as.numeric(cwf.out[j,i]) > 0.1) {
+        cwf.out[j,i] <- paste0("\\color{lightgray} ",cwf.out[j,i])
+        if (colnames(cwf.out)[i+1]=="power") {
+          cwf.out[j,i+1] <- paste0("\\color{lightgray} ",cwf.out[j,i+1])
+        }
+      }
+    }
+  }
+}
+cwf.str.out <- print(xtable(cwf.out), include.rownames=FALSE,booktabs = TRUE,
+      sanitize.colnames.function=function (x) {paste0("\\textsc{",x,"}")},
+      sanitize.text.function=function (x) {x})
+cwf.str.out <- gsub(
+  "\\\\begin\\{tabular\\}\\{l*\\}", 
+  "\\\\begin{tabular}{lrrrr@{\\\\hspace{1.8em}}rr}", cwf.str.out)
+cwf.str.out <- gsub("toprule",
+"toprule 
+  & \\\\multicolumn{2}{c}{\\\\textsc{param.}} & \\\\multicolumn{2}{c@{\\\\hspace{1.8em}}}{\\\\textsc{smooth}} && \\\\\\\\
+\\\\cmidrule(lr{.5em}){2-3}\\\\cmidrule(l{.5em}r{1.7em}){4-5}", cwf.str.out)
+cwf.str.out <- gsub("table","table*",cwf.str.out)
+clip <- pipe("pbcopy", "w")
+write(cwf.str.out, file=clip)                               
+close(clip)
+```
+
+## Different methods of significance testing
+
+`sim.type == "complex_sigtest"`.
+
+```{r}
+make.table <- function (tbl, selectors) {
+  tbl <- as.data.frame(tbl, stringsAsFactors=F)
+  out <- data.frame(type.of.test="", 
+                    type.1=0,
+                    type.1=0,
+                    type.1=0, power=0, memory=0, time=0,
+                    stringsAsFactors=F)[0,]
+  summarycol <- paste(gsub("(.*?)_.*", "\\1", tbl$diff.smooth.type),tbl$method,sep=",")
+  for (s in 1:length(selectors)) {
+    sel <- selectors[[s]]
+    out[s,] <- list(sel$name,
+                    tbl[tbl$data.type=="formants" & summarycol==sel$which.row,sel$columns[1]],
+                    tbl[tbl$data.type=="pitch" & summarycol==sel$which.row,sel$columns[1]],
+                    tbl[tbl$data.type=="simulated" & summarycol==sel$which.row & tbl$mod.comp==sel$mod.comp.sim,sel$columns[1]],
+                    tbl[tbl$data.type=="simulated" & summarycol==sel$which.row & tbl$mod.comp==sel$mod.comp.sim,sel$columns[2]],
+                    tbl[tbl$data.type=="simulated" & summarycol==sel$which.row & tbl$mod.comp==sel$mod.comp.sim,sel$columns[3]],
+                    tbl[tbl$data.type=="simulated" & summarycol==sel$which.row & tbl$mod.comp==sel$mod.comp.sim,sel$columns[4]])
+    print(out[s,])
+  }
+  return(out)
+}
+
+make.vis.table <- function (tbl, selectors) {
+  tbl <- as.data.frame(tbl, stringsAsFactors=F)
+  out <- data.frame(type.of.test="", type.1=0, power=0, type.1=0, power=0, stringsAsFactors=F)[0,]
+  summarycol <- paste(tbl$diff.smooth.type,tbl$method,sep=",")
+  for (s in 1:length(selectors)) {
+    sel <- selectors[[s]]
+    out[s,] <- list(sel$name,
+                    tbl[summarycol==sel$which.row,paste(sel$which.p,"type.1",sep=".")],
+                    tbl[summarycol==sel$which.row,paste(sel$which.p,"power",sep=".")],
+                    tbl[summarycol==sel$which.row,"memory.med"],
+                    tbl[summarycol==sel$which.row,"time.med"])
+    print(out[s,])
+  }
+  return(out)
+}
+
+
+dat.cs.all <- dat[dat$sim.type=="complex_sigtest",]
+
+# aggregating data
+dat.cs.aggr <- 
+  dat.cs.all[,.(smooth.type.1=mean(smooth.p[error.type=="type_1"] < 0.05),
+                both.type.1=mean(par.p[error.type=="type_1"] < 0.05 | smooth.p[error.type=="type_1"] < 0.05),
+                bonferroni.type.1=mean(par.p[error.type=="type_1"] < 0.025 | smooth.p[error.type=="type_1"] < 0.025),
+                mod.comp.type.1=mean(mod.comp.p[error.type=="type_1"] < 0.05),
+                AIC.median.type.1=median(mod.comp.AIC[error.type=="type_1"], na.rm=T),
+                AIC.lower.type.1=quantile(mod.comp.AIC[error.type=="type_1"], 0.025, na.rm=T),
+                AIC.upper.type.1=quantile(mod.comp.AIC[error.type=="type_1"], 0.975, na.rm=T),
+                AIC.cutoff.type.1=mean(mod.comp.AIC[error.type=="type_1"] < 0, na.rm=T),
+                smooth.power=mean(smooth.p[error.type=="type_2"] < 0.05),
+                both.power=mean(par.p[error.type=="type_2"] < 0.05 | smooth.p[error.type=="type_2"] < 0.05),
+                bonferroni.power=mean(par.p[error.type=="type_2"] < 0.025 | smooth.p[error.type=="type_2"] < 0.025),
+                mod.comp.power=mean(mod.comp.p[error.type=="type_2"] < 0.05),
+                AIC.median.power=median(mod.comp.AIC[error.type=="type_2"], na.rm=T),
+                AIC.lower.power=quantile(mod.comp.AIC[error.type=="type_2"], 0.025, na.rm=T),
+                AIC.upper.power=quantile(mod.comp.AIC[error.type=="type_2"], 0.975, na.rm=T),
+                AIC.cutoff.power=mean(mod.comp.AIC[error.type=="type_2"] < 0, na.rm=T),
+                time.med=median(time),
+                memory.med=median(memory)),
+                by=.(data.type,diff.smooth.type,method,mod.comp)]
+kable(dat.cs.aggr)
+
+csf.out <- make.table(dat.cs.aggr,
+                     list(
+                       list(name="par/smooth",
+                            which.row="diff,discrete",
+                            mod.comp.sim="nomodcomp",
+                            columns=c("both.type.1","both.power","memory.med","time.med")),
+                       list(name="par/smooth bonf.",
+                            which.row="diff,discrete",
+                            mod.comp.sim="nomodcomp",
+                            columns=c("bonferroni.type.1","bonferroni.power","memory.med","time.med")),
+                       list(name="binary smooth",
+                            which.row="bin,discrete",
+                            mod.comp.sim="nomodcomp",
+                            columns=c("smooth.type.1","smooth.power","memory.med","time.med")),
+                       list(name="LRT, ML",
+                            which.row="diff,ML",
+                            mod.comp.sim="modcomp",
+                            columns=c("mod.comp.type.1","mod.comp.power","memory.med","time.med")),
+                       list(name="LRT, fREML",
+                            which.row="diff,discrete",
+                            mod.comp.sim="modcomp",
+                            columns=c("mod.comp.type.1","mod.comp.power","memory.med","time.med")),
+                       list(name="LRT, fREML trick",
+                            which.row="diff,discrete+select",
+                            mod.comp.sim="modcomp",
+                            columns=c("mod.comp.type.1","mod.comp.power","memory.med","time.med")),
+                       list(name="AIC, fREML",
+                            which.row="diff,discrete",
+                            mod.comp.sim="modcomp",
+                            columns=c("AIC.cutoff.type.1","AIC.cutoff.power","memory.med","time.med"))
+                     ))
+
+colnames(csf.out) <- c("significance test",
+                      "type I","type I","type I","power",
+                      "memory","time")
+#csf.out <- as.data.frame(csf.out)
+for (i in 2:5) {
+  csf.out[,i] <- sprintf("%.3f", csf.out[,i])
+}
+for (i in 6:7) {
+  csf.out[,i] <- sprintf("%.1f", csf.out[,i])
+}
+
+for (i in 2:5) {
+  if (colnames(csf.out)[i]=="type I") {
+    for (j in 1:nrow(csf.out)) {
+      if (csf.out[j,i]!="NA" && as.numeric(csf.out[j,i]) > 0.1) {
+        csf.out[j,i] <- paste0("\\color{lightgray} ",csf.out[j,i])
+        if (colnames(csf.out)[i+1]=="power") {
+          csf.out[j,i+1] <- paste0("\\color{lightgray} ",csf.out[j,i+1])
+        }
+      }
+    }
+  }
+}
+
+csf.str.out <- print(xtable(csf.out),include.rownames=FALSE,booktabs = TRUE,
+      sanitize.colnames.function=function (x) {paste0("\\textsc{",x,"}")},
+      sanitize.text.function=function (x) {x})
+csf.str.out <- gsub(
+  "\\\\begin\\{tabular\\}\\{l*\\}", 
+  "\\\\begin{tabular}{lr@{\\\\hspace{1.8em}}r@{\\\\hspace{1.8em}}rr@{\\\\hspace{1.8em}}rr}", csf.str.out)
+csf.str.out <- gsub("toprule",
+"toprule 
+  & \\\\textsc{r.\\\\ formants} & \\\\textsc{r.\\\\ pitch} & \\\\multicolumn{2}{c@{\\\\hspace{2.3em}}}{\\\\textsc{s.\\\\ formants}}\\\\\\\\ 
+\\\\cmidrule(l{.5em}r{1.7em}){2-2}\\\\cmidrule(l{-.1em}r{1.7em}){3-3}\\\\cmidrule(l{-.1em}r{1.7em}){4-5}", csf.str.out)
+clip <- pipe("pbcopy", "w")
+write(csf.str.out, file=clip)                               
+close(clip)
+```
+
+Report figures for AIC data.
+
+```{r}
+aics.form <- dat.cs.all[data.type=="formants" & startsWith(diff.smooth.type, "diff") & method=="discrete",]
+cutoffs <- seq(-5,0,0.01)
+type1s <- unlist(lapply(cutoffs, function (x) mean(aics.form$mod.comp.AIC < x)))
+plot(cutoffs, type1s)
+mean(aics.form$mod.comp.AIC < -0.2)
+
+aics.pitch <- dat.cs.all[data.type=="pitch" & startsWith(diff.smooth.type, "diff") & method=="discrete",]
+cutoffs <- seq(-5,0,0.01)
+type1s <- unlist(lapply(cutoffs, function (x) mean(aics.pitch$mod.comp.AIC < x)))
+plot(cutoffs, type1s)
+mean(aics.pitch$mod.comp.AIC < -0.2)
+
+aics.sim1 <- dat.cs.all[data.type=="simulated" & startsWith(diff.smooth.type, "diff") & method=="discrete" & error.type=="type_1",]
+cutoffs <- seq(-5,0,0.01)
+type1s <- unlist(lapply(cutoffs, function (x) mean(aics.sim1$mod.comp.AIC < x)))
+plot(cutoffs, type1s)
+mean(aics.sim1$mod.comp.AIC < -0.2)
+
+aics.sim2 <- dat.cs.all[data.type=="simulated" & startsWith(diff.smooth.type, "diff") & method=="discrete" & error.type=="type_2",]
+cutoffs <- seq(-5,0,0.01)
+power <- unlist(lapply(cutoffs, function (x) mean(aics.sim2$mod.comp.AIC < x)))
+plot(cutoffs, power)
+mean(aics.sim2$mod.comp.AIC < -0.2)
+```
+
+```{r}
+# no table for visual data; instead, ecdf plots are used
+
+dat.cs.simulated.vis.type.1 <- dat.cs.all[method=="discrete" & error.type=="type_1" & data.type=="simulated" & mod.comp=="modcomp",]
+dat.cs.simulated.vis.power <- dat.cs.all[method=="discrete" & error.type=="type_2" & data.type=="simulated" & mod.comp=="modcomp",]
+reverse.ecdf <- function (x) {
+  Vectorize(function (y) {mean(x >= y)}, "y")
+}
+csf.overlap.type.1 <- reverse.ecdf(dat.cs.simulated.vis.type.1$visual.no.overlap)(seq(0.01,1,0.01))
+csf.overlap.power <- reverse.ecdf(dat.cs.simulated.vis.power$visual.no.overlap)(seq(0.01,1,0.01))
+csf.diff.type.1 <- reverse.ecdf(dat.cs.simulated.vis.type.1$visual.excludes.0)(seq(0.01,1,0.01))
+csf.diff.power <- reverse.ecdf(dat.cs.simulated.vis.power$visual.excludes.0)(seq(0.01,1,0.01))
+
+pdf("../../jphon/revision_2/images/sim_visual.pdf",width=6, height=4.5)
+plot(c(), c(), xlim=c(0,100), ylim=c(0,1), xlab="", ylab="", cex.axis=1.25,
+     xaxt="n")
+axis(1, at=c(1,20,40,60,80,100), cex.axis=1.25)
+title(xlab="Cut-off %", cex.lab=1.25, font.lab=2)
+title(ylab="Type I error rate / Power", cex.lab=1.25, font.lab=2)
+title(main="Visual methods: Simulated F2", cex.lab=1.25, font.lab=2, cex.main=1.75)
+lines(seq(1,100,1), csf.overlap.type.1, lwd=3, col="firebrick3", lty=2)
+lines(seq(1,100,1), csf.overlap.power, lwd=3, col="deepskyblue4", lty=2)
+lines(seq(1,100,1), csf.diff.type.1, lwd=3, col="firebrick3", lty=1)
+lines(seq(1,100,1), csf.diff.power, lwd=3, col="deepskyblue4", lty=1)
+text(5, 0.92, "difference, power", col="deepskyblue4", adj=0, cex=1.25)
+text(2, 0.675, "overlap, power", col="deepskyblue4", adj=0, cex=1.25)
+text(1, 0.2, "difference, type I", col="firebrick3", adj=0, cex=1.25)
+text(3, 0.08, "overlap, type I", col="firebrick3", adj=0, cex=1.25)
+abline(h=0.05, col="darkgray", lty=3, lw=2)
+#legend("topright", c("overlap, type I","overlap, power", 
+#                     "difference, type I", "difference, power"),
+#       col=c("firebrick3","deepskyblue4","firebrick3","deepskyblue4"),
+#       lty=c(2,2,1,1), lwd=rep(2,4))
+dev.off()
+```
+
+```{r}
+# no table for visual data; instead, ecdf plots are used
+
+dat.cs.formants.vis.type.1 <- dat.cs.all[method=="discrete" & error.type=="type_1" & data.type=="formants" & mod.comp=="modcomp",]
+dat.cs.pitch.vis.type.1 <- dat.cs.all[method=="discrete" & error.type=="type_1" & data.type=="pitch" & mod.comp=="modcomp",]
+
+reverse.ecdf <- function (x) {
+  Vectorize(function (y) {mean(x >= y)}, "y")
+}
+csf.overlap.type.1 <- reverse.ecdf(dat.cs.formants.vis.type.1$visual.no.overlap)(seq(0.01,1,0.01))
+csp.overlap.type.1 <- reverse.ecdf(dat.cs.pitch.vis.type.1$visual.no.overlap)(seq(0.01,1,0.01))
+csf.diff.type.1 <- reverse.ecdf(dat.cs.formants.vis.type.1$visual.excludes.0)(seq(0.01,1,0.01))
+csp.diff.type.1 <- reverse.ecdf(dat.cs.pitch.vis.type.1$visual.excludes.0)(seq(0.01,1,0.01))
+
+pdf("../../jphon/revision_2/images/formant_pitch_visual.pdf",width=6, height=4.5)
+par(mfrow=c(2,1))
+par(oma = c(0, 2, 0, 0))
+par(mar=c(1.1,2.1,4.1,2.1))
+plot(c(), c(), xlim=c(0,100), ylim=c(0,0.25), xlab="", ylab="", cex.axis=1.25,
+     xaxt="n", yaxt="n")
+axis(2, at=c(0,0.1,0.2), labels=c("0.0", "0.1", "0.2"), cex.axis=1.25)
+#axis(1, at=c(1,20,40,60,80,100), cex.axis=1.25)
+#title(ylab="Type I\n error rate", cex.lab=1.25, font.lab=2)
+title(main="Visual methods: Real F2 / Pitch", cex.lab=1.25, font.lab=2, cex.main=1.75)
+lines(seq(1,100,1), csf.overlap.type.1, lwd=3, col="firebrick3", lty=2)
+lines(seq(1,100,1), csf.diff.type.1, lwd=3, col="firebrick3", lty=1)
+
+lines(c(-13,-1), c(0.05, 0.05), col="darkgray", lty=3, lw=2)
+lines(c(32,200), c(0.05, 0.05), col="darkgray", lty=3, lw=2)
+
+
+text(0, 0.19, "difference, type I", col="firebrick3", adj=0, cex=1.25)
+text(0, 0.06, "overlap, type I", col="firebrick3", adj=0, cex=1.25)
+
+mtext("Real F2", side=3, line = -1.35, adj=0.98, cex=1.25, font=2)
+
+#legend("topright", c("overlap, type I","overlap, power", 
+#                     "difference, type I", "difference, power"),
+#       col=c("firebrick3","deepskyblue4","firebrick3","deepskyblue4"),
+#       lty=c(2,2,1,1), lwd=rep(2,4))
+
+par(mar=c(5.1,2.1,0.1,2.1))
+plot(c(), c(), xlim=c(0,100), ylim=c(0,0.25), xlab="", ylab="", cex.axis=1.25,
+     xaxt="n", yaxt="n")
+axis(1, at=c(1,20,40,60,80,100), cex.axis=1.25)
+axis(2, at=c(0,0.1,0.2), cex.axis=1.25)
+title(xlab="Cut-off %", cex.lab=1.25, font.lab=2)
+#title(ylab="Type I\n error rate", cex.lab=1.25, font.lab=2)
+lines(seq(1,100,1), csp.overlap.type.1, lwd=3, col="firebrick3", lty=2)
+lines(seq(1,100,1), csp.diff.type.1, lwd=3, col="firebrick3", lty=1)
+#text(1, 0.2, "difference, type I", col="firebrick3", adj=0, cex=1.25)
+#text(3, 0.08, "overlap, type I", col="firebrick3", adj=0, cex=1.25)
+#abline(h=0.05, col="darkgray", lty=3, lw=2)
+lines(c(-13,-1), c(0.05, 0.05), col="darkgray", lty=3, lw=2)
+lines(c(32,200), c(0.05, 0.05), col="darkgray", lty=3, lw=2)
+
+text(0, 0.15, "difference, type I", col="firebrick3", adj=0, cex=1.25)
+text(0, 0.05, "overlap, type I", col="firebrick3", adj=0, cex=1.25)
+
+mtext('Type I error rate', side = 2, outer = TRUE, line = 1, cex=1.25, font=2)
+mtext("Real pitch", side=3, line = -1.35, adj=0.98, cex=1.25, font=2)
+
+dev.off()
+```
+
+```{r}
+# no table for visual data; instead, ecdf plots are used
+
+dat.cs.formants.vis.type.1 <- dat.cs.formants[dat.cs.formants$method=="discrete" & dat.cs.formants$error.type=="type_1",]
+dat.cs.formants.vis.power <- dat.cs.formants[dat.cs.formants$method=="discrete" & dat.cs.formants$error.type=="type_2",]
+reverse.ecdf <- function (x) {
+  Vectorize(function (y) {mean(x >= y)}, "y")
+}
+csf.overlap.type.1 <- reverse.ecdf(dat.cs.formants.vis.type.1$visual.no.overlap)(seq(0.01,1,0.01))
+csf.overlap.power <- reverse.ecdf(dat.cs.formants.vis.power$visual.no.overlap)(seq(0.01,1,0.01))
+csf.diff.type.1 <- reverse.ecdf(dat.cs.formants.vis.type.1$visual.excludes.0)(seq(0.01,1,0.01))
+csf.diff.power <- reverse.ecdf(dat.cs.formants.vis.power$visual.excludes.0)(seq(0.01,1,0.01))
+
+pdf("../jphon/images/f2_visual.pdf",width=6, height=4.5)
+plot(c(), c(), xlim=c(0,100), ylim=c(0,1), xlab="", ylab="", cex.axis=1.25,
+     xaxt="n")
+axis(1, at=c(1,20,40,60,80,100), cex.axis=1.25)
+title(xlab="Cut-off %", cex.lab=1.25, font.lab=2)
+title(ylab="Type I error rate / Power", cex.lab=1.25, font.lab=2)
+title(main="Visual methods: F2 contours", cex.lab=1.25, font.lab=2, cex.main=1.75)
+lines(seq(1,100,1), csf.overlap.type.1, lwd=3, col="firebrick3", lty=2)
+lines(seq(1,100,1), csf.overlap.power, lwd=3, col="deepskyblue4", lty=2)
+lines(seq(1,100,1), csf.diff.type.1, lwd=3, col="firebrick3", lty=1)
+lines(seq(1,100,1), csf.diff.power, lwd=3, col="deepskyblue4", lty=1)
+abline(h=0.05, col="gray", lty=3, lw=2)
+legend("topright", c("overlap, type I","overlap, power", 
+                     "difference, type I", "difference, power"),
+       col=c("firebrick3","deepskyblue4","firebrick3","deepskyblue4"),
+       lty=c(2,2,1,1), lwd=rep(2,4))
+dev.off()
+
+
+```
+
+And now the pitch contours.
+
+```{r}
+dat.cs.pitch <- dat[dat$sim.type=="complex_sigtest" & dat$data.type=="pitch",]
+# aggregating data
+dat.cs.pitch.aggr <- 
+  dat.cs.pitch[,.(smooth.type.1=mean(smooth.p[error.type=="type_1"] < 0.05),
+                     both.type.1=mean(par.p[error.type=="type_1"] < 0.05 | smooth.p[error.type=="type_1"] < 0.05),
+                     bonferroni.type.1=mean(par.p[error.type=="type_1"] < 0.025 | smooth.p[error.type=="type_1"] < 0.025),
+                     mod.comp.type.1=mean(mod.comp.p[error.type=="type_1"] < 0.05),
+                     smooth.power=mean(smooth.p[error.type=="type_2"] < 0.05),
+                     both.power=mean(par.p[error.type=="type_2"] < 0.05 | smooth.p[error.type=="type_2"] < 0.05),
+                     bonferroni.power=mean(par.p[error.type=="type_2"] < 0.025 | smooth.p[error.type=="type_2"] < 0.025),
+                     mod.comp.power=mean(mod.comp.p[error.type=="type_2"] < 0.05),
+                     time.med=median(time),
+                     memory.med=median(memory)),
+                  by=.(diff.smooth.type,method)]
+kable(dat.cs.formants.aggr)
+
+csp.out <- make.table(dat.cs.pitch.aggr,
+                     list(
+                       list(name="par/smooth",
+                            which.row="diff_tp_15,discrete",
+                            which.p="both"),
+                       list(name="par/smooth bonf.",
+                            which.row="diff_tp_15,discrete",
+                            which.p="bonferroni"),
+                       list(name="LRT, ML",
+                            which.row="diff_tp_15,ML",
+                            which.p="mod.comp"),
+                       list(name="LRT, fREML",
+                            which.row="diff_tp_15,discrete",
+                            which.p="mod.comp"),
+                       list(name="binary smooth",
+                            which.row="bin_tp_15,discrete",
+                            which.p="smooth"),
+                       list(name="LRT, fREML trick",
+                            which.row="diff_tp_15,discrete+select",
+                            which.p="mod.comp")
+                     ))
+
+colnames(csp.out) <- c("significance test",
+                      "type I","power",
+                      "memory","time")
+csp.out <- as.data.frame(csp.out)
+csp.out[,2] <- as.character(round(csp.out[,2],3))
+csp.out[,3] <- as.character(round(csp.out[,3],3))
+for (j in 1:nrow(csp.out)) {
+  if (as.numeric(csp.out[j,2]) > 0.15) {
+    csp.out[j,2] <- paste0("\\color{lightgray} ",csp.out[j,2])
+    csp.out[j,3] <- paste0("\\color{lightgray} ",csp.out[j,3])
+  }
+}
+
+csp.str.out <- print(xtable(csp.out, digits=c(0,0,0,0,1,1)),include.rownames=FALSE,booktabs = TRUE,
+      sanitize.colnames.function=function (x) {paste0("\\textsc{",x,"}")},
+      sanitize.text.function=function (x) {x})
+csp.str.out <- gsub("lllrr", "ll@{\\\\hspace{0.7em}}l@{\\\\hspace{0.7em}}r@{\\\\hspace{0.7em}}r", csp.str.out)
+clip <- pipe("pbcopy", "w")
+write(csp.str.out, file=clip)                               
+close(clip)
+
+dat.cs.pitch.vis.type.1 <- dat.cs.pitch[dat.cs.pitch$method=="ML" & dat.cs.pitch$error.type=="type_1",]
+dat.cs.pitch.vis.power <- dat.cs.pitch[dat.cs.pitch$method=="ML" & dat.cs.pitch$error.type=="type_2",]
+reverse.ecdf <- function (x) {
+  Vectorize(function (y) {mean(x >= y)}, "y")
+}
+csp.overlap.type.1 <- reverse.ecdf(dat.cs.pitch.vis.type.1$visual.no.overlap)(seq(0.01,1,0.01))
+csp.overlap.power <- reverse.ecdf(dat.cs.pitch.vis.power$visual.no.overlap)(seq(0.01,1,0.01))
+csp.diff.type.1 <- reverse.ecdf(dat.cs.pitch.vis.type.1$visual.excludes.0)(seq(0.01,1,0.01))
+csp.diff.power <- reverse.ecdf(dat.cs.pitch.vis.power$visual.excludes.0)(seq(0.01,1,0.01))
+
+pdf("../jphon/images/pitch_visual.pdf",width=6, height=4.5)
+plot(c(), c(), xlim=c(0,100), ylim=c(0,1), xlab="", ylab="", cex.axis=1.25,
+     xaxt="n")
+axis(1, at=c(1,20,40,60,80,100), cex.axis=1.25)
+title(xlab="Cut-off %", cex.lab=1.25, font.lab=2)
+title(ylab="Type I error rate / Power", cex.lab=1.25, font.lab=2)
+title(main="Visual methods: Pitch contours", cex.lab=1.25, font.lab=2, cex.main=1.75)
+lines(seq(1,100,1), csp.overlap.type.1, lwd=3, col="firebrick3", lty=2)
+lines(seq(1,100,1), csp.overlap.power, lwd=3, col="deepskyblue4", lty=2)
+lines(seq(1,100,1), csp.diff.type.1, lwd=3, col="firebrick3", lty=1)
+lines(seq(1,100,1), csp.diff.power, lwd=3, col="deepskyblue4", lty=1)
+abline(h=0.05, col="gray", lty=3, lw=2)
+legend("topright", c("overlap, type I","overlap, power", 
+                     "difference, type I", "difference, power"),
+       col=c("firebrick3","deepskyblue4","firebrick3","deepskyblue4"),
+       lty=c(2,2,1,1), lwd=rep(2,4))
+dev.off()
+```

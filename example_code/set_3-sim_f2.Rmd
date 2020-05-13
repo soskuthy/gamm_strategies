@@ -1,0 +1,358 @@
+---
+title: "Models for set 3, Simulated F2 results (GAMM modelling strategies)"
+author: "Márton Sóskuthy"
+date: "12/05/2020"
+output:
+  md_document:
+    variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This document is a supplement to "Evaluating generalised additive mixed modelling strategies for dynamic speech analysis," relating specifically to the contents of Table 3 in Section 3.3.2. It presents code that illustrates (i) how the simulated data were generated and (ii) the models whose performance is summarised Table 3.
+
+## Preliminaries
+
+The code below loads the relevant libraries.
+
+```{r, message=F}
+library(ggplot2)
+library(mgcv)
+library(itsadug)
+library(MASS)
+```
+
+## Data generation
+
+The code in this section can be used to create data for either type I or type II simulations. Set the value of *type* to 1 for type I simulations and to 2 for type II simulations.
+
+```{r}
+type = 2
+```
+
+The data for this set of simulations consist of simulated f2 trajectories modelled after the diphthong /aI/. In this simulation, there are 50 different speakers, each represented by 40 trajectories. 20 of these trajectories are assigned to group A and 20 to group B - in other speakers, these simulations exemplify a within-item design. For type I simulations, there is no underlying difference between the two groups. For type II simulations, the underlying trajectories are slightly different (cf. Section 2.1 in the paper and also the Appendix).
+
+The following code sets the parameters that determine the main characteristics of the data set.
+
+```{r}
+# setting time dimension
+xs = seq(0,1,0.1)
+
+# population parameters: individual speakers come from this dist
+f2_start_mean = 1300
+if (type==1) {
+  f2_end_1_mean = 1630
+  f2_end_2_mean = 1660
+} else {
+  f2_end_1_mean = 1650
+  f2_end_2_mean = 1650
+}
+f2_start_sd.speaker = 90
+f2_end_sd.speaker = 90
+# correlation between pairs of parameter values sampled for two groups within same speaker;
+# rho = 7/8 means that the sd of the difference between the two groups within
+#   the same speaker is 0.5 * the sd of the target values
+# in mixed model lingo: the sd of the random slope is half of the sd of the intercept
+f2_start_rho.speaker = 7/8
+f2_end_rho.speaker = 7/8
+
+# expected value & sd for transition point
+x0_mean = 0.6
+x0_sd.speaker = 0.020
+x0_rho.speaker = 7/8 # same as above
+# expected value & sd for steepness (higher -> more steep)
+k_mean = 15
+k_sd.speaker = 4
+k_rho.speaker = 7/8 # same as above
+
+# how much variation within speaker-group pairs? (unchanged from before)
+f2_start_sd.traj = 150
+f2_end_sd.traj = 150
+x0_sd.traj = 0.015
+k_sd.traj = 3
+
+# amount of random noise
+
+noise_sd <- 40
+
+n_speakers <- 50
+n_trajectories_per_speaker <- 40
+```
+
+The code below assembles the data set.
+
+```{r}
+# assembling trajectories
+
+make_cov_matrix <- function (a.sd, b.sd, rho) {
+  matrix(c(a.sd**2, rho*a.sd*b.sd, rho*a.sd*b.sd, b.sd**2), nrow=2)
+}
+
+ys_m <- matrix(0, nrow=length(xs), ncol=n_speakers*n_trajectories_per_speaker)
+for (i in 1:n_speakers) {
+  f2_start.speaker <- mvrnorm(1, rep(f2_start_mean, 2), 
+                           make_cov_matrix(f2_start_sd.speaker, f2_start_sd.speaker, f2_start_rho.speaker))
+  f2_end.speaker <- mvrnorm(1, c(f2_end_1_mean, f2_end_2_mean), 
+                         make_cov_matrix(f2_end_sd.speaker, f2_end_sd.speaker, f2_end_rho.speaker))
+  x0.speaker <- mvrnorm(1, rep(x0_mean, 2), 
+                     make_cov_matrix(x0_sd.speaker, x0_sd.speaker, x0_rho.speaker))
+  k.speaker <- mvrnorm(1, rep(k_mean, 2), 
+                     make_cov_matrix(k_sd.speaker, k_sd.speaker, k_rho.speaker))
+  for (j in 1:(n_trajectories_per_speaker/2)) {
+    # group A
+    f2_start <- rnorm(1, f2_start.speaker[1], f2_start_sd.traj)
+    f2_end <- rnorm(1, f2_end.speaker[1], f2_end_sd.traj)
+    x0 <- rnorm(1, x0.speaker[1], x0_sd.traj)
+    k <- rnorm(1, k.speaker[1], k_sd.traj)
+    ys_m[,(i-1)*n_trajectories_per_speaker + j*2 - 1] <- ((f2_end - f2_start) / (1 + exp(-k*(xs-x0)))) + f2_start + rnorm(length(xs), 0, noise_sd)
+    # group B
+    f2_start <- rnorm(1, f2_start.speaker[2], f2_start_sd.traj)
+    f2_end <- rnorm(1, f2_end.speaker[2], f2_end_sd.traj)
+    x0 <- rnorm(1, x0.speaker[2], x0_sd.traj)
+    k <- rnorm(1, k.speaker[2], k_sd.traj)
+    ys_m[,(i-1)*n_trajectories_per_speaker + j*2] <- ((f2_end - f2_start) / (1 + exp(-k*(xs-x0)))) + f2_start + rnorm(length(xs), 0, noise_sd)
+  }
+}
+
+# assembling data set (randomly assigned to categories)
+dat <- data.frame(traj=paste("traj_", rep(1:(n_speakers*n_trajectories_per_speaker), each=length(xs)), sep=""),
+                  speaker=paste("speaker_", rep(1:n_speakers, each=length(xs)*n_trajectories_per_speaker), sep=""),
+                  group=rep(c("A","B"), each=length(xs), times=n_speakers*n_trajectories_per_speaker / 2),
+                  measurement.no=xs, 
+                  f2=c(ys_m),
+                  stringsAsFactors = F
+                 )
+
+# setting up different types of grouping factors
+dat$group.factor <- as.factor(dat$group)
+dat$group.ordered <- as.ordered(dat$group)
+contrasts(dat$group.ordered) <- "contr.treatment"
+dat$group.bin <- as.numeric(dat$group.factor) - 1
+
+# ids ought to be factors  
+dat$traj <- as.factor(dat$traj)
+dat$speaker <- as.factor(dat$speaker)
+dat$speakerGroup <- interaction(dat$speaker, dat$group)
+
+# add dat$start for AR.start (for autoregressive error models)
+
+dat$start <- dat$measurement.no == 0
+```
+
+Here is what the data set looks like. (Note that the difference is very subtle for type II simulations, and hard to make out in this graph. This is because otherwise power would be far too high for the simulations.)
+
+```{r}
+ggplot(dat, aes(x=measurement.no, y=f2, group=traj, col=group)) +
+  geom_line(alpha=0.6) +
+  facet_wrap(~speaker) +
+  theme_bw()
+```
+
+## Models
+
+All the models (and sets of models) from Table 3 are shown below in the same order as in the table. The numbers in the section headers correspond to the row numbers.
+
+### SIMPLE RANDOM SMOOTHS: 1. Random smooth by speaker, 3 bs
+
+```{r}
+rand_smooth_3 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 3), 
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(rand_smooth_3)
+```
+
+### SIMPLE RANDOM SMOOTHS: 2. Random smooth by speaker, 5 bs
+
+```{r}
+rand_smooth_5 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 5), 
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(rand_smooth_5)
+```
+
+### SIMPLE RANDOM SMOOTHS: 3. Random smooth by speaker, 10 bs
+
+```{r}
+rand_smooth_10 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10), 
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(rand_smooth_10)
+```
+
+### RANDOM SMOOTHS + SLOPES: 4. 3 bs
+
+```{r}
+rand_slope_smooth_3 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 3) +
+        s(speaker, group.ordered, bs="re"), 
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(rand_slope_smooth_3)
+```
+
+### RANDOM SMOOTHS + SLOPES: 5. 5 bs
+
+```{r}
+rand_slope_smooth_5 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 5) +
+        s(speaker, group.ordered, bs="re"), 
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(rand_slope_smooth_5)
+```
+
+### RANDOM SMOOTHS + SLOPES: 6. 10 bs
+
+```{r}
+rand_slope_smooth_10 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10) +
+        s(speaker, group.ordered, bs="re"), 
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(rand_slope_smooth_10)
+```
+
+### ITEM X EFFECT: 7. Item x effect random smooths, 3 bs
+
+```{r}
+item_x_effect_rand_smooth_3 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speakerGroup, bs = "fs", m = 1, xt = "cr", k = 3), 
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(item_x_effect_rand_smooth_3)
+```
+
+### ITEM X EFFECT: 8. Item x effect random smooths, 5 bs
+
+```{r}
+item_x_effect_rand_smooth_5 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speakerGroup, bs = "fs", m = 1, xt = "cr", k = 5), 
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(item_x_effect_rand_smooth_5)
+```
+
+### ITEM X EFFECT: 9. Item x effect random smooths, 10 bs
+
+```{r}
+item_x_effect_rand_smooth_10 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speakerGroup, bs = "fs", m = 1, xt = "cr", k = 10), 
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(item_x_effect_rand_smooth_10)
+```
+
+### ITEM BY EFFECT: 10. Item by effect random smooths, 3 bs
+
+```{r}
+item_by_effect_rand_smooth_3 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speaker, by=group.factor, bs = "fs", m = 1, xt = "cr", k = 3), 
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(item_by_effect_rand_smooth_3)
+```
+
+### ITEM BY EFFECT: 11. Item by effect random smooths, 5 bs
+
+```{r}
+item_by_effect_rand_smooth_5 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speaker, by=group.factor, bs = "fs", m = 1, xt = "cr", k = 5), 
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(item_by_effect_rand_smooth_5)
+```
+
+### ITEM BY EFFECT: 12. Item by effect random smooths, 10 bs
+
+```{r}
+item_by_effect_rand_smooth_10 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speaker, by=group.factor, bs = "fs", m = 1, xt = "cr", k = 10), 
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(item_by_effect_rand_smooth_10)
+```
+
+### REFERENCE/DIFFERENCE: 13. random reference/difference smooths, 3 bs
+
+```{r}
+reference_difference_rand_smooth_3 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 3) +
+        s(measurement.no, speaker, by=group.ordered, bs = "fs", m = 1, xt = "cr", k = 3),
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(reference_difference_rand_smooth_3)
+```
+
+### REFERENCE/DIFFERENCE: 14. random reference/difference smooths, 5 bs
+
+```{r}
+reference_difference_rand_smooth_5 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 5) +
+        s(measurement.no, speaker, by=group.ordered, bs = "fs", m = 1, xt = "cr", k = 5),
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(reference_difference_rand_smooth_5)
+```
+
+### REFERENCE/DIFFERENCE: 15. random reference/difference smooths, 10 bs
+
+```{r}
+reference_difference_rand_smooth_10 <- 
+  bam(f2 ~ group.ordered + 
+        s(measurement.no, bs = "tp", k = 10) + 
+        s(measurement.no, by = group.ordered, bs = "tp", k = 10) + 
+        s(measurement.no, speaker, bs = "fs", m = 1, xt = "cr", k = 10) +
+        s(measurement.no, speaker, by=group.ordered, bs = "fs", m = 1, xt = "cr", k = 10),
+      data = dat, 
+      method = "fREML", discrete = T, nthreads = 1)
+summary(reference_difference_rand_smooth_10)
+```

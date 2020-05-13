@@ -1,0 +1,141 @@
+---
+title: "Assembling master data sheet for GAMM Modelling Strategies paper (JPhon)"
+output: html_notebook
+---
+
+```{r "setup", include=FALSE}
+require("knitr")
+# setting workind dir
+opts_knit$set(root.dir = "~/documents/research/projects/dynamic-gam/gamm_strategies")
+```
+
+Importing relevant libraries.
+
+```{r}
+library(mgcv)
+library(data.table)
+library(stringr)
+```
+
+Here are three helper functions that allow us to read in data from the simulation output files and store it in a data frame. These functions need to be somewhat flexible as not all simulations return exactly the same type of data. Differences include:
+
+- binary vs. difference smooths, which mean that some models lack a parametric difference term
+- in simulations where visualisation data was collected, the name of the slots with the visualisation info are visual_no_overlap and visual_excludes_0; in other simulations these slots are typically called visual_diff and visual_both (but these are NULL valued)
+- some simulations include model comparisons, while others don't
+
+```{r}
+# helper function for extracting p value from compareML output
+
+ch.p.value.to.numeric <- function (x) {
+  if (!is.na(x)) {
+    if (as.character(x) == " < 2e-16") {
+      return (0)
+    } else {
+      return(as.numeric(as.character(x)))
+    }
+  } else { # value of NA only when ML of nested model is lower than that of full model
+    return (1)
+  }
+}
+
+# helper function for extracting AIC value from compareML output
+
+AIC.to.numeric <- function (x) {
+  return(as.numeric(gsub("AIC difference: (-*[0-9]*[.][0-9]*).*", "\\1", x)))
+}
+
+# helper function for getting info from a single simulation run
+
+extract.single.line <- function (x) { # where x is a single simulation run
+  list(diff.smooth.type=x$parameters$fixed_effects,
+       ranef=x$parameters$random_effects,
+       AR=x$parameters$AR,
+       method=x$parameters$method,
+       mod.comp=x$parameters$mod_comp,
+       data.density=x$parameters$dataset,
+       random.smooth.k=ifelse(grepl("gamcheck", x$parameters$random_effects), extract.random.smooth.k(x$full_code), NA),
+       smooth.p=x$summary$smooth[2,4],
+       par.p=ifelse(nrow(x$summary$parametric) > 1, x$summary$parametric[2,4], NA),
+       mod.comp.p=ifelse(!is.null(x$model_comparison), ch.p.value.to.numeric(x$model_comparison$table[[2,6]]), NA),
+       mod.comp.AIC=ifelse(!is.null(x$model_comparison), AIC.to.numeric(x$model_comparison$AIC), NA),
+       visual.no.overlap=ifelse(!is.null(x$visual_no_overlap),x$visual_no_overlap,NA),
+       visual.excludes.0=ifelse(!is.null(x$visual_excludes_0),x$visual_excludes_0,NA),
+       time=x$time[[3]],
+       memory=x$memory)
+}
+
+# function for assembling data frame with info about each batch of simulations within a single iteration
+
+analyse.batch <- function (output.item) {
+  return( rbindlist(lapply(output.item, extract.single.line)) )
+}
+
+extract.random.smooth.k <- function (model_code) {
+  return(as.numeric(str_match(model_code, 'bs=["]fs["][^)]*k=([0-9]*)')[2]))
+}
+```
+
+Now we load the relevant data sets, process them and write the master data sheet to an rds file.
+
+```{r}
+# these are the subfolders in the gamm_modelling_strategies github repo
+# dirs.to.read <- c("pitch/complex_sigtest")
+dirs.to.read <- c("formants/simple/output_type_1",
+                  "formants/complex_across/output_type_1",
+                  "formants/complex_sigtest/output_type_1",
+                  "pitch/simple/output_type_1",
+                  "pitch/complex_across/output_type_1",
+                  "pitch/complex_sigtest/output_type_1",
+                  "simulated/simple/output_type_1",
+                  "simulated/simple/output_type_2",
+                  "simulated/complex_across/output_type_1",
+                  "simulated/complex_across/output_type_2",
+                  "simulated/complex_within/output_type_1",
+                  "simulated/complex_within/output_type_2",
+                  "simulated/complex_sigtest/output_type_1",
+                  "simulated/complex_sigtest/output_type_2")
+# adding location of type 1 / type 2 sims for each subfolder
+# dirs.to.read <- unlist(lapply(c("/output_type_1","/output_type_2"), function (x) paste(dirs.to.read,x,sep="")))
+# metadata for merging with loaded data sets (generated from folder names)
+dirs.to.read.df <- data.table(sim.summary=dirs.to.read,
+                              data.type=unlist(lapply(str_split(dirs.to.read, "/"), function (x) x[1])),
+                              sim.type=unlist(lapply(str_split(dirs.to.read, "/"), function (x) x[2])),
+                              error.type=unlist(lapply(str_split(dirs.to.read, "/"), function (x) substr(x[3], 8,13)))
+                              )
+
+# extremely complex code for very simple task of creating
+# a shortened id for each simulation folder...
+dirs.to.read.df$sim.sum.short <- with(dirs.to.read.df,
+                                      paste(substr(data.type,1,1),
+                                            ifelse(unlist(lapply(str_split(sim.type, "_"), function (x) length(x) > 1)),
+                                                   unlist(lapply(str_split(sim.type, "_"), function (x) paste(substr(x[1],1,1), substr(x[2],1,1), sep=""))),
+                                                   substr(sim.type, 1, 2)),
+                                            substr(error.type, nchar(error.type), nchar(error.type)),
+                                            sep="") 
+)
+
+# creating list of data tables
+dats <- list()
+for (dir in 1:length(dirs.to.read)) {
+  t <- system.time({
+  # list of files in relevant folder (these should all be of type rds)
+  files.to.read <- list.files(dirs.to.read[dir], full.names=T)
+  # this is where the real action happens: 
+  # - files read in one by one
+  # - each file contains a set of gamm summaries based on the same simulated data
+  # - each of these summaries is converted to a list (inside analyse.batch)
+  # - these are joined into a data table (inside analyse.batch)
+  # - then all thes data tables are bound together (rbindlist)
+  dats[[dir]] <- rbindlist(lapply(files.to.read, function (x) {analyse.batch(readRDS(x))}),idcol="sim.id")
+  # adding metadata for simulations
+  dats[[dir]] <- cbind(dirs.to.read.df[dir,], dats[[dir]])
+  # adding ids for each simulated data set
+  dats[[dir]]$sim.id <- paste(dirs.to.read.df[dir,]$sim.sum.short, dats[[dir]]$sim.id, sep="_")
+  })
+  cat(dirs.to.read[dir], "read in", t[[3]],"\n")
+}
+# creating master data set through rbinding list of data tables
+dat <- rbindlist(dats)
+# saving master data set
+saveRDS(dat, "gamm_sim_master.rds")
+```
