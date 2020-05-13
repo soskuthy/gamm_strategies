@@ -658,7 +658,7 @@ Note that this loop takes a long time to run when “iterations” is set to
 
 ``` r
 # how many iterations?
-iterations <- 10
+iterations <- 200
 
 # lists for storing p-values
 rint_out <- list()
@@ -712,11 +712,11 @@ to do manually, so there’s no need to necessarily implement something
 quite as complicated as below.
 
     ##  type I error:   param.  smooth
-    ## random intercept-only    0.1 1
-    ## rand. smooth, tp 3   0   0.2
-    ## rand. smooth, tp 10  0   0.1
-    ## rand. smooth, cr 3   0   0.2
-    ## rand. smooth, cr 10  0.1 0
+    ## random intercept-only    0.06    0.74
+    ## rand. smooth, tp 3   0.055   0.205
+    ## rand. smooth, tp 10  0.05    0.17
+    ## rand. smooth, cr 3   0.055   0.15
+    ## rand. smooth, cr 10  0.055   0.06
 
 Although these results have to be treated with caution due to the small
 number of iterations, it seems pretty clear that the ideal solution here
@@ -732,16 +732,16 @@ the maximum it is allowed (this can be established by comparing the
 figures in the “edf” column to those in the “Ref.df” column).
 
     ## model with cr-3 basis functions:
-    ##                                   edf     Ref.df          F       p-value
-    ## s(measurement_no)            8.628386   8.953697 117.840571 1.383648e-215
-    ## s(measurement_no):cat.ordB   1.998025   2.510473   1.205371  4.081977e-01
-    ## s(measurement_no,speaker)  101.312954 119.000000  17.104968 1.298926e-102
+    ##                                   edf     Ref.df         F       p-value
+    ## s(measurement_no)            8.573472   8.923583 72.638260 3.817908e-130
+    ## s(measurement_no):cat.ordB   3.218329   4.135094  1.359252  2.263405e-01
+    ## s(measurement_no,speaker)  102.114368 119.000000 14.673997  5.719254e-93
     ## 
     ## model with cr-10 basis functions:
-    ##                                   edf     Ref.df           F       p-value
-    ## s(measurement_no)            8.308817   8.623736 146.2080024 7.440329e-255
-    ## s(measurement_no):cat.ordB   1.197417   1.266988   0.5010179  4.295936e-01
-    ## s(measurement_no,speaker)  219.098501 397.000000   5.7834497  3.221279e-63
+    ##                                   edf     Ref.df         F       p-value
+    ## s(measurement_no)            8.195842   8.517877 76.506729 1.891118e-129
+    ## s(measurement_no):cat.ordB   3.170945   3.619170  3.672628  9.136217e-03
+    ## s(measurement_no,speaker)  224.045374 397.000000  4.726010  5.506013e-82
 
 This suggests that a simpler random smooth might do equally well, and
 this could be checked through further simulations (e.g. by focusing on
@@ -758,39 +758,39 @@ but they don’t reveal any obvious heteroscedascity.
 gam.check(rsmooth_cr_10_mod)
 ```
 
+![](gamm_type_1_simulation_tutorial_files/figure-markdown_github/unnamed-chunk-17-1.png)
+
     ## 
     ## Method: fREML   Optimizer: perf chol
     ## $grad
-    ## [1]  3.058720e-05 -4.663663e-04  5.410194e-05 -1.437229e-06  7.999522e-07
-    ## [6]  3.525000e-04
+    ## [1] -6.661338e-13 -3.890221e-12 -1.277556e-11  5.211085e-09 -6.188827e-12
+    ## [6] -5.824404e-09
     ## 
     ## $hess
-    ##            [,1]          [,2]          [,3]          [,4]          [,5]
-    ##    3.801904e+00 -3.066503e-05  9.709863e-02  1.045502e-03 -2.188841e-03
-    ##   -3.066503e-05  4.663031e-04 -5.353695e-05  1.441344e-06 -8.014006e-07
-    ##    9.709863e-02 -5.353695e-05  2.033135e+01 -7.237352e-03 -8.545101e-02
-    ##    1.045502e-03  1.441344e-06 -7.237352e-03  1.767762e+01  7.418010e-03
-    ##   -2.188841e-03 -8.014006e-07 -8.545101e-02  7.418010e-03  1.528994e+01
-    ## d -3.799529e+00 -3.530823e-04 -3.920772e+01 -1.831764e+01 -1.686561e+01
-    ##            [,6]
-    ##   -3.799529e+00
-    ##   -3.530823e-04
-    ##   -3.920772e+01
-    ##   -1.831764e+01
-    ##   -1.686561e+01
-    ## d  6.575000e+03
+    ##            [,1]         [,2]          [,3]          [,4]          [,5]
+    ##    3.6610998120  0.212457707  -0.008257078  1.689789e-04  -0.005108786
+    ##    0.2124577075  0.429165288   0.050167224 -2.772528e-03   0.031425643
+    ##   -0.0082570782  0.050167224  24.718032545 -4.827322e-02  -0.013204544
+    ##    0.0001689789 -0.002772528  -0.048273218  1.764033e+01  -0.019479549
+    ##   -0.0051087864  0.031425643  -0.013204544 -1.947955e-02  13.747473465
+    ## d -3.7564001043 -1.164716527 -41.728519911 -1.827499e+01 -16.136874273
+    ##          [,6]
+    ##     -3.756400
+    ##     -1.164717
+    ##    -41.728520
+    ##    -18.274991
+    ##    -16.136874
+    ## d 6539.000000
     ## 
     ## Model rank =  420 / 420 
     ## 
     ## Basis dimension (k) checking results. Low p-value (k-index<1) may
     ## indicate that k is too low, especially if edf is close to k'.
     ## 
-    ##                               k'   edf k-index p-value
-    ## s(measurement_no)            9.0   8.6    0.99    0.23
-    ## s(measurement_no):cat.ordB   9.0   1.0    0.99    0.27
-    ## s(measurement_no,speaker)  400.0 148.8    0.99    0.23
-
-<img src="gamm_type_1_simulation_tutorial_files/figure-markdown_github/unnamed-chunk-17-1.png" width="25%" />
+    ##                                k'    edf k-index p-value
+    ## s(measurement_no)            9.00   8.51    1.03    1.00
+    ## s(measurement_no):cat.ordB   9.00   3.33    1.03    0.99
+    ## s(measurement_no,speaker)  400.00 152.28    1.03    0.96
 
 The QQ-plot suggests that the residuals may follow a T-distribution.
 Following advice in Wieling (2018), we should refit our top-ranked model
@@ -819,25 +819,25 @@ rsmooth_cr_10_mod_sc  <-
     ## 
     ## Parametric coefficients:
     ##             Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)  1463.29      23.63  61.913   <2e-16 ***
-    ## cat.ordB       22.01      33.31   0.661    0.509    
+    ## (Intercept)  1464.85      22.01  66.548   <2e-16 ***
+    ## cat.ordB      -10.74      31.09  -0.346     0.73    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
-    ##                                edf  Ref.df     F p-value    
-    ## s(measurement_no)            8.599   8.928 92.35  <2e-16 ***
-    ## s(measurement_no):cat.ordB   1.002   1.002  0.42   0.517    
-    ## s(measurement_no,speaker)  148.782 397.000  4.77  <2e-16 ***
+    ##                                edf  Ref.df      F p-value    
+    ## s(measurement_no)            8.513   8.864 50.944  <2e-16 ***
+    ## s(measurement_no):cat.ordB   3.329   4.138  2.816  0.0215 *  
+    ## s(measurement_no,speaker)  152.281 397.000  4.617  <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.467   Deviance explained = 47.4%
-    ## fREML =  86118  Scale est. = 38302     n = 13154
+    ## R-sq.(adj) =  0.473   Deviance explained =   48%
+    ## fREML =  85145  Scale est. = 35452     n = 13082
     ## 
     ## model with family="scat":
     ## 
-    ## Family: Scaled t(5.064,169.25) 
+    ## Family: Scaled t(5.029,160.519) 
     ## Link function: identity 
     ## 
     ## Formula:
@@ -846,21 +846,21 @@ rsmooth_cr_10_mod_sc  <-
     ## 
     ## Parametric coefficients:
     ##             Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)  1458.02      24.61  59.245   <2e-16 ***
-    ## cat.ordB       19.55      34.66   0.564    0.573    
+    ## (Intercept) 1457.198     22.708  64.172   <2e-16 ***
+    ## cat.ordB      -9.126     31.969  -0.285    0.775    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Approximate significance of smooth terms:
     ##                                edf  Ref.df      F p-value    
-    ## s(measurement_no)            8.722   8.950 92.769  <2e-16 ***
-    ## s(measurement_no):cat.ordB   1.001   1.001  1.136   0.287    
-    ## s(measurement_no,speaker)  160.674 396.000  5.227  <2e-16 ***
+    ## s(measurement_no)            8.731   8.950 81.249 < 2e-16 ***
+    ## s(measurement_no):cat.ordB   1.000   1.001 10.482 0.00121 ** 
+    ## s(measurement_no,speaker)  165.254 397.000  5.448 < 2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## R-sq.(adj) =  0.463   Deviance explained = 42.8%
-    ## fREML =  18875  Scale est. = 1         n = 13154
+    ## R-sq.(adj) =  0.469   Deviance explained = 42.9%
+    ## fREML =  18795  Scale est. = 1         n = 13082
 
 The model summaries are reassuringly similar. Running gam.check()
 reveals that the scaled-T family no longer violates distributional
@@ -870,18 +870,20 @@ assumptions.
 gam.check(rsmooth_cr_10_mod_sc)
 ```
 
+![](gamm_type_1_simulation_tutorial_files/figure-markdown_github/unnamed-chunk-20-1.png)
+
     ## 
     ## Method: fREML   Optimizer: perf chol
     ## $grad
-    ## [1] -1.723177e-06 -1.315408e-04  1.213593e-05  6.039253e-07  6.770155e-06
+    ## [1] -7.641788e-06 -5.648240e-05 -1.180632e-04 -7.038126e-06  9.364827e-05
     ## 
     ## $hess
     ##               [,1]          [,2]          [,3]          [,4]          [,5]
-    ## [1,]  3.813514e+00  8.334046e-06  8.045770e-02  7.272743e-04 -2.569044e-04
-    ## [2,]  8.334046e-06  1.315500e-04  3.074576e-05 -4.422630e-07 -3.506318e-06
-    ## [3,]  8.045770e-02  3.074576e-05  2.356055e+01 -2.654557e-02 -2.940520e-02
-    ## [4,]  7.272743e-04 -4.422630e-07 -2.654557e-02  1.777417e+01  1.460409e-03
-    ## [5,] -2.569044e-04 -3.506318e-06 -2.940520e-02  1.460409e-03  1.521673e+01
+    ## [1,]  3.791639e+00  3.632523e-05  1.194488e-02 -4.256899e-04 -8.292102e-05
+    ## [2,]  3.632523e-05  5.648912e-05  8.261517e-06 -6.631421e-07  7.593465e-06
+    ## [3,]  1.194488e-02  8.261517e-06  3.007056e+01 -6.637253e-02 -2.425573e-02
+    ## [4,] -4.256899e-04 -6.631421e-07 -6.637253e-02  1.776292e+01 -1.464774e-02
+    ## [5,] -8.292102e-05  7.593465e-06 -2.425573e-02 -1.464774e-02  1.440168e+01
     ## 
     ## Model rank =  420 / 420 
     ## 
@@ -889,11 +891,9 @@ gam.check(rsmooth_cr_10_mod_sc)
     ## indicate that k is too low, especially if edf is close to k'.
     ## 
     ##                                k'    edf k-index p-value
-    ## s(measurement_no)            9.00   8.72    1.02    0.96
-    ## s(measurement_no):cat.ordB   9.00   1.00    1.02    0.95
-    ## s(measurement_no,speaker)  400.00 160.67    1.02    0.96
-
-<img src="gamm_type_1_simulation_tutorial_files/figure-markdown_github/unnamed-chunk-20-1.png" width="25%" />
+    ## s(measurement_no)            9.00   8.73    1.01    0.74
+    ## s(measurement_no):cat.ordB   9.00   1.00    1.01    0.74
+    ## s(measurement_no,speaker)  400.00 165.25    1.01    0.70
 
 It is also instructive to look at the model diagnostics for some of the
 problematic models:
@@ -902,27 +902,29 @@ problematic models:
 gam.check(rsmooth_cr_3_mod)
 ```
 
+![](gamm_type_1_simulation_tutorial_files/figure-markdown_github/unnamed-chunk-21-1.png)
+
     ## 
     ## Method: fREML   Optimizer: perf chol
     ## $grad
-    ## [1]  3.207656e-12 -2.790668e-05  2.131628e-14  7.105427e-15  1.421085e-14
-    ## [6]  4.365575e-11
+    ## [1] -8.694689e-11 -8.833012e-10  1.364775e-10  8.384404e-13  5.751843e-12
+    ## [6]  1.846274e-10
     ## 
     ## $hess
-    ##            [,1]          [,2]          [,3]          [,4]          [,5]
-    ##    3.833577e+00  2.108044e-06  4.872535e-03  3.636441e-04 -1.756756e-03
-    ##    2.108044e-06  2.796815e-05  1.170038e-05 -2.285758e-07  7.120504e-07
-    ##    4.872535e-03  1.170038e-05  1.371231e+01 -1.086440e-01 -9.102198e-03
-    ##    3.636441e-04 -2.285758e-07 -1.086440e-01  1.762686e+01  9.764129e-03
-    ##   -1.756756e-03  7.120504e-07 -9.102198e-03  9.764129e-03  1.532797e+01
-    ## d -3.820628e+00 -2.870916e-04 -1.628951e+01 -1.830146e+01 -1.688593e+01
-    ##            [,6]
-    ##   -3.820628e+00
-    ##   -2.870916e-04
-    ##   -1.628951e+01
-    ##   -1.830146e+01
-    ##   -1.688593e+01
-    ## d  6.575000e+03
+    ##           [,1]         [,2]         [,3]          [,4]          [,5]
+    ##    3.708694550  0.178076371  -0.02246150  -0.001660933  -0.003055155
+    ##    0.178076371  0.584681724  -0.01118482  -0.002389257   0.019811763
+    ##   -0.022461497 -0.011184820  15.14758535  -0.096237143  -0.059305360
+    ##   -0.001660933 -0.002389257  -0.09623714  17.621482122  -0.044408811
+    ##   -0.003055155  0.019811763  -0.05930536  -0.044408811  13.931036231
+    ## d -3.783904927 -1.250879322 -17.00639433 -18.256745327 -16.230979005
+    ##          [,6]
+    ##     -3.783905
+    ##     -1.250879
+    ##    -17.006394
+    ##    -18.256745
+    ##    -16.230979
+    ## d 6539.000000
     ## 
     ## Model rank =  140 / 140 
     ## 
@@ -930,26 +932,28 @@ gam.check(rsmooth_cr_3_mod)
     ## indicate that k is too low, especially if edf is close to k'.
     ## 
     ##                                k'    edf k-index p-value
-    ## s(measurement_no)            9.00   8.64    0.98    0.13
-    ## s(measurement_no):cat.ordB   9.00   1.00    0.98    0.14
-    ## s(measurement_no,speaker)  120.00 102.95    0.98    0.14
+    ## s(measurement_no)            9.00   8.57       1    0.45
+    ## s(measurement_no):cat.ordB   9.00   3.50       1    0.46
+    ## s(measurement_no,speaker)  120.00 102.99       1    0.36
 
 ``` r
 gam.check(rsmooth_tp_10_mod)
 ```
 
+![](gamm_type_1_simulation_tutorial_files/figure-markdown_github/unnamed-chunk-21-2.png)
+
     ## 
     ## Method: fREML   Optimizer: perf chol
     ## $grad
-    ## [1]  2.606744e-07 -2.003226e-06 -1.044351e-06 -9.586188e-09  4.030877e-06
+    ## [1] -4.130030e-14  8.126833e-14  1.278977e-13  2.131628e-14  6.548362e-11
     ## 
     ## $hess
-    ##           [,1]          [,2]         [,3]          [,4]          [,5]
-    ##    3.716847398 -0.0070982084   0.06790345 -1.122434e-03   -3.65440879
-    ##   -0.007098208  0.0146512487   0.04718045  2.885294e-04   -0.09870636
-    ##    0.067903452  0.0471804500  63.06498072 -9.768467e-01  -91.52113177
-    ##   -0.001122434  0.0002885294  -0.97684671  1.707690e+01  -18.02811792
-    ## d -3.654408788 -0.0987063577 -91.52113177 -1.802812e+01 6574.99999597
+    ##           [,1]          [,2]        [,3]          [,4]        [,5]
+    ##    3.525218699  0.1815323751  -0.0197839 -6.178307e-03   -3.597921
+    ##    0.181532375  0.4789583207   0.1100773 -6.912318e-04   -1.085472
+    ##   -0.019783897  0.1100773414  62.8585806 -1.184583e+00  -94.060461
+    ##   -0.006178307 -0.0006912318  -1.1845834  1.708485e+01  -17.962226
+    ## d -3.597921021 -1.0854724596 -94.0604609 -1.796223e+01 6539.000000
     ## 
     ## Model rank =  420 / 420 
     ## 
@@ -957,11 +961,9 @@ gam.check(rsmooth_tp_10_mod)
     ## indicate that k is too low, especially if edf is close to k'.
     ## 
     ##                                k'    edf k-index p-value
-    ## s(measurement_no)            9.00   8.31       1    0.51
-    ## s(measurement_no):cat.ordB   9.00   1.20       1    0.46
-    ## s(measurement_no,speaker)  400.00 219.10       1    0.51
-
-<img src="gamm_type_1_simulation_tutorial_files/figure-markdown_github/unnamed-chunk-21-1.png" width="25%" /><img src="gamm_type_1_simulation_tutorial_files/figure-markdown_github/unnamed-chunk-21-2.png" width="25%" />
+    ## s(measurement_no)            9.00   8.20       1    0.43
+    ## s(measurement_no):cat.ordB   9.00   3.17       1    0.46
+    ## s(measurement_no,speaker)  400.00 224.05       1    0.39
 
 Since the data are randomly generated, you might see results that are
 different from what I was shown originally. However, after having run
