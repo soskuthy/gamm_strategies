@@ -1,4 +1,4 @@
 # Evaluating generalised additive mixed modelling strategies for dynamic speech analysis
-Code &amp; analysis for "Evaluating generalised additive mixed modelling strategies for dynamic speech analysis"
+Code &amp; analysis for "Evaluating generalised additive mixed modelling strategies for dynamic speech analysis".
 
-This github repo contains all the files used for 
+The "example_code" folder contains markdown files that exemplify the models tested in the paper. The "tutorial" folder contains a markdown tutorial on choosing the right random smooth specification. The folders "formants", "pitch" and "simulated" contain config files & data for the simulations; the simulations themselves can be run using the file "gamm_single_iteration.r" from the command line. This script runs a single iteration of the simulation, and is designed to be run in parallel on a cluster. The main analysis (used to generate the tables and graphs in the paper) is in the "analysis" folder.
